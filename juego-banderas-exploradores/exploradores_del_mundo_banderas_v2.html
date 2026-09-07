@@ -217,6 +217,7 @@
                 <span class="inline-block bg-blue-100 text-blue-700 rounded-full px-3 py-1 m-1">10 banderas por ronda</span>
                 <span class="inline-block bg-green-100 text-green-700 rounded-full px-3 py-1 m-1">10 puntos cada una</span>
                 <span class="inline-block bg-amber-100 text-amber-700 rounded-full px-3 py-1 m-1">2 comodines</span>
+                <span class="inline-block bg-rose-100 text-rose-600 rounded-full px-3 py-1 m-1"><span id="home-paises">94</span> países</span>
             </p>
             <button onclick="app.startRound()" class="btn-game btn-3d bg-gradient-to-b from-green-400 to-green-600 text-white text-2xl font-black py-4 px-10 rounded-full" style="--shadow-color:#15803d">
                 ¡JUGAR AHORA! <i class="fa-solid fa-play ml-2" aria-hidden="true"></i>
@@ -372,7 +373,14 @@
             <div id="modal-icon" class="text-6xl sm:text-7xl mb-3" aria-hidden="true"></div>
             <h3 id="modal-title" class="text-3xl font-black mb-2"></h3>
             <img id="modal-flag" class="flag-img mx-auto mb-3 hidden" alt="" loading="lazy">
-            <p id="modal-message" class="text-lg text-slate-600 font-bold mb-5 text-balance"></p>
+            <p id="modal-message" class="text-lg text-slate-600 font-bold mb-3 text-balance"></p>
+            <!-- Ficha del país (capital, moneda, idioma, código): fuente, libros de S. Sanyal -->
+            <dl id="modal-ficha" class="hidden grid grid-cols-2 gap-2 text-left mb-5" aria-label="Datos del país">
+                <div class="bg-slate-100 rounded-xl p-2"><dt class="text-[10px] uppercase tracking-wide font-black text-slate-400"><i class="fa-solid fa-city mr-1" aria-hidden="true"></i>Capital</dt><dd id="ficha-capital" class="text-sm font-bold text-slate-700"></dd></div>
+                <div class="bg-slate-100 rounded-xl p-2"><dt class="text-[10px] uppercase tracking-wide font-black text-slate-400"><i class="fa-solid fa-coins mr-1" aria-hidden="true"></i>Moneda</dt><dd id="ficha-moneda" class="text-sm font-bold text-slate-700"></dd></div>
+                <div class="bg-slate-100 rounded-xl p-2"><dt class="text-[10px] uppercase tracking-wide font-black text-slate-400"><i class="fa-solid fa-comments mr-1" aria-hidden="true"></i>Idioma</dt><dd id="ficha-idioma" class="text-sm font-bold text-slate-700"></dd></div>
+                <div class="bg-slate-100 rounded-xl p-2"><dt class="text-[10px] uppercase tracking-wide font-black text-slate-400"><i class="fa-solid fa-globe mr-1" aria-hidden="true"></i>Código</dt><dd id="ficha-codigo" class="text-sm font-bold text-slate-700"></dd></div>
+            </dl>
             <button id="modal-btn" class="btn-game btn-3d text-white text-xl font-bold py-3 px-8 rounded-full w-full">Continuar</button>
             <button id="modal-cancel" class="btn-game mt-3 text-slate-500 hover:text-slate-700 font-bold w-full py-2 hidden">Seguir jugando</button>
         </div>
@@ -396,7 +404,7 @@
         NIVEL_INICIAL: 'D',
         NIVEL_COMODIN: ['M', 'F'],
         // Regla 3: categorías permitidas para comodines
-        CATEGORIAS_COMODIN: ['Color extra', 'Monumentos', 'Comida', 'Historia', 'Naturaleza']
+        CATEGORIAS_COMODIN: ['Color extra', 'Monumentos', 'Comida', 'Historia', 'Naturaleza', 'Capital', 'Moneda', 'Idioma']
     });
     const COSTO_COMODIN = REGLAS.PUNTOS_BASE * REGLAS.COSTO_COMODIN_PCT; // 2.5
 
@@ -410,11 +418,20 @@
 
     /* =====================================================================
        BANCO DE DATOS
-       Fuente: "Vexilología Comparada y Pistas Culturales" (tablas por
+       Fuentes: "Vexilología Comparada y Pistas Culturales" (tablas por
        región) complementado con "Banderas y pistas culturales para un juego
-       educativo mundial" y "banderas-por-continente".
+       educativo mundial" y "banderas-por-continente". Ampliación (sep. 2026)
+       con los libros de Sujata Sanyal: "Banderas del mundo: un viaje visual"
+       (ficha y bandera), "El libro de las banderas: datos para niños" (cotejo)
+       e "Identificación de banderas: cuestionario" (pistas fáciles, filtradas).
 
        Estructura por país:
+         datos  : ficha (capital, moneda con artículo, idioma). Al cargar, el
+                  motor genera de aquí las pistas fáciles de categoría
+                  Capital, Moneda e Idioma y añade al perfil los hechos
+                  moneda:<x> e idioma:<x> para que el motor distinga países
+                  que comparten moneda o idioma. Se omite cualquier pista
+                  que mencione el nombre del país.
          perfil : hechos verdaderos de su bandera (vocabulario controlado).
                   El motor los usa para comprobar si una pista también
                   "aplica" a un país distractor en pantalla.
@@ -431,6 +448,7 @@
     const DATABASE = {
         "Africa": [
             { id: "NGA", iso: "ng", nombre: "Nigeria",
+              datos: { capital: 'Abuya', moneda: 'el naira', idioma: 'inglés' },
               perfil: ['franjas:3','orient:v','iguales','c:verde','c:blanco','ncolores:2','pos:izq=verde','pos:centro=blanco','pos:der=verde','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales del mismo tamaño y solo usa dos colores.', ['franjas:3','orient:v','iguales','ncolores:2']),
@@ -439,9 +457,13 @@
                 H('M', 'Color extra', 'La franja del centro es blanca y las de los lados son verdes. No lleva escudo.', ['pos:centro=blanco','pos:izq=verde','s:ninguno']),
                 H('F', 'Comida', 'Su comida más famosa es el arroz jollof, rojo por el tomate, y las brochetas picantes llamadas suya.'),
                 H('F', 'Naturaleza', 'Su ave representativa es el águila coronada.'),
-                H('F', 'Monumentos', 'Tiene una roca gigante llamada Zuma Rock, un monolito famoso del país.')
+                H('F', 'Monumentos', 'Tiene una roca gigante llamada Zuma Rock, un monolito famoso del país.'),
+                H('F', 'Monumentos', 'Su ciudad más grande es Lagos.'),
+                H('F', 'Naturaleza', 'El río Níger, uno de los más largos de África, pasa por el país.'),
+                H('F', 'Historia', 'Cada año celebra el festival Osun-Osogbo, de la cultura yoruba.')
             ]},
             { id: "MAR", iso: "ma", nombre: "Marruecos",
+              datos: { capital: 'Rabat', moneda: 'el dírham marroquí', idioma: 'árabe y bereber' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:verde','ncolores:2','s:estrella','estrella:verde','estrella:centro','estrella:lineas','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es de un solo color: rojo intenso.', ['nofranjas','fondo:rojo']),
@@ -450,9 +472,12 @@
                 H('M', 'Color extra', 'La estrella del centro es verde y está hecha con cinco líneas que se cruzan.', ['s:estrella','estrella:verde','estrella:lineas']),
                 H('F', 'Comida', 'Aquí se come cuscús al vapor con siete verduras y tagine de cordero con ciruelas.'),
                 H('F', 'Naturaleza', 'En sus montañas vive el macaco de Berbería, un mono que no tiene cola.'),
-                H('F', 'Naturaleza', 'El león del Atlas es el gran felino que representa a este país.')
+                H('F', 'Naturaleza', 'El león del Atlas es el gran felino que representa a este país.'),
+                H('F', 'Naturaleza', 'El desierto del Sáhara cubre gran parte del sur del país.'),
+                H('F', 'Monumentos', 'Tiene una ciudad famosa por sus calles pintadas de azul: Chefchaouen.')
             ]},
             { id: "ETH", iso: "et", nombre: "Etiopía",
+              datos: { capital: 'Adís Abeba', moneda: 'el birr', idioma: 'afar, amárico, oromo, somalí y tigrinya' },
               perfil: ['franjas:3','orient:h','iguales','c:verde','c:amarillo','c:rojo','c:azul','ncolores:4','pos:arriba=verde','pos:centro=amarillo','pos:abajo=rojo','s:circulo','circulo:azul','s:estrella','estrella:amarilla','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales del mismo tamaño y un círculo en el centro.', ['franjas:3','orient:h','iguales','s:circulo']),
@@ -461,9 +486,12 @@
                 H('M', 'Color extra', 'Dentro del círculo azul hay una estrella amarilla con rayos de luz.', ['s:circulo','circulo:azul','s:estrella','estrella:amarilla']),
                 H('F', 'Comida', 'Se come con un pan plano y esponjoso llamado injera, que se usa para tomar la comida con la mano.'),
                 H('F', 'Comida', 'Su guiso más famoso es el doro wat, pollo picante con especias.'),
-                H('F', 'Naturaleza', 'En sus montañas Simien viven el íbice de Walia y el babuino gelada.')
+                H('F', 'Naturaleza', 'En sus montañas Simien viven el íbice de Walia y el babuino gelada.'),
+                H('F', 'Historia', 'En un lugar llamado Hadar se encontraron fósiles de antepasados humanos muy antiguos.'),
+                H('F', 'Historia', 'Celebra su Año Nuevo el 11 de septiembre.')
             ]},
             { id: "MDG", iso: "mg", nombre: "Madagascar",
+              datos: { capital: 'Antananarivo', moneda: 'el ariary', idioma: 'malgache y francés' },
               perfil: ['orient:mixta','c:blanco','c:rojo','c:verde','ncolores:3','pos:izq=blanco','pos:arriba=rojo','pos:abajo=verde','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene una franja vertical junto al mástil y dos franjas horizontales a la derecha.', ['orient:mixta']),
@@ -472,9 +500,12 @@
                 H('M', 'Color extra', 'De las dos franjas horizontales, la roja va arriba y la verde abajo.', ['pos:arriba=rojo','pos:abajo=verde']),
                 H('F', 'Naturaleza', 'Es el único lugar del mundo donde viven en libertad los lémures de cola anillada.'),
                 H('F', 'Naturaleza', 'Tiene una avenida famosa de árboles gigantes con troncos gordísimos: los baobabs.'),
-                H('F', 'Comida', 'Su guiso tradicional se llama romazava y se prepara con carne y hojas verdes.')
+                H('F', 'Comida', 'Su guiso tradicional se llama romazava y se prepara con carne y hojas verdes.'),
+                H('F', 'Naturaleza', 'Ahí vive el indri, un lémur que solo existe en esa isla.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional Tsingy de Bemaraha, famoso por su fauna y flora únicas.')
             ]},
             { id: "GHA", iso: "gh", nombre: "Ghana",
+              datos: { capital: 'Acra', moneda: 'el cedi', idioma: 'inglés' },
               perfil: ['franjas:3','orient:h','iguales','c:rojo','c:amarillo','c:verde','c:negro','ncolores:4','pos:arriba=rojo','pos:centro=amarillo','pos:abajo=verde','s:estrella','estrella:negra','estrella:centro','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y una estrella en el centro.', ['franjas:3','orient:h','s:estrella','estrella:centro']),
@@ -483,9 +514,12 @@
                 H('M', 'Color extra', 'La estrella de cinco puntas del centro es de color negro.', ['s:estrella','estrella:negra','estrella:centro']),
                 H('F', 'Comida', 'Se come fufu, una masa suave, acompañada de sopa de cacahuete.'),
                 H('F', 'Comida', 'Su arroz jollof se prepara con pimientos muy picantes.'),
-                H('F', 'Naturaleza', 'En sus bosques vive el bongo, un antílope con rayas blancas.')
+                H('F', 'Naturaleza', 'En sus bosques vive el bongo, un antílope con rayas blancas.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional Mole, famoso por su fauna.'),
+                H('F', 'Historia', 'En el norte del país se celebra el festival Damba.')
             ]},
             { id: "SEN", iso: "sn", nombre: "Senegal",
+              datos: { capital: 'Dakar', moneda: 'el franco CFA de África Occidental', idioma: 'francés' },
               perfil: ['franjas:3','orient:v','iguales','c:verde','c:amarillo','c:rojo','ncolores:3','pos:izq=verde','pos:centro=amarillo','pos:der=rojo','s:estrella','estrella:verde','estrella:centro','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales y una estrella pequeña en el centro.', ['franjas:3','orient:v','s:estrella','estrella:centro']),
@@ -494,9 +528,13 @@
                 H('M', 'Color extra', 'La estrella de cinco puntas del centro es verde, sobre la franja amarilla.', ['s:estrella','estrella:verde','pos:centro=amarillo']),
                 H('F', 'Comida', 'Su plato nacional es el thiéboudienne: pescado con arroz y verduras.'),
                 H('F', 'Comida', 'El pollo yassa se prepara con mucha cebolla y limón.'),
-                H('F', 'Naturaleza', 'En sus parques viven leones y la gacela dama.')
+                H('F', 'Naturaleza', 'En sus parques viven leones y la gacela dama.'),
+                H('D', 'Bandera', 'Sus franjas son verticales y la del centro es amarilla.', ['orient:v','pos:centro=amarillo']),
+                H('F', 'Historia', 'Su música y baile tradicional se llama mbalax.'),
+                H('F', 'Historia', 'Su capital organiza una bienal de arte muy famosa.')
             ]},
             { id: "TZA", iso: "tz", nombre: "Tanzania",
+              datos: { capital: 'Dodoma', moneda: 'el chelín tanzano', idioma: 'suajili e inglés' },
               perfil: ['orient:diag','s:diag','diag:negra','diag:bordes-amarillos','c:verde','c:negro','c:amarillo','c:azul','ncolores:4','s:triangulo','triangulo:verde','triangulo:azul'],
               pistas: [
                 H('D', 'Bandera', 'Está dividida en diagonal por una banda negra.', ['orient:diag','s:diag','diag:negra']),
@@ -506,9 +544,12 @@
                 H('F', 'Naturaleza', 'Aquí vive la jirafa masái y se ve la gran migración de ñus.'),
                 H('F', 'Monumentos', 'Aquí se encuentra el famoso Monte Kilimanjaro.'),
                 H('F', 'Monumentos', 'Tiene una ciudad antigua de piedra en la isla de Zanzíbar.'),
-                H('F', 'Comida', 'Se come ugali, una masa de maíz, con carne asada nyama choma.')
+                H('F', 'Comida', 'Se come ugali, una masa de maíz, con carne asada nyama choma.'),
+                H('F', 'Naturaleza', 'Su parque nacional más famoso es el Serengeti.'),
+                H('F', 'Naturaleza', 'Comparte el lago Victoria con Uganda y Kenia.')
             ]},
             { id: "DZA", iso: "dz", nombre: "Argelia",
+              datos: { capital: 'Argel', moneda: 'el dinar argelino', idioma: 'árabe y tamazight' },
               perfil: ['franjas:2','orient:v','mitades','iguales','c:verde','c:blanco','c:rojo','ncolores:3','pos:izq=verde','pos:der=blanco','s:luna','luna:roja','s:estrella','estrella:roja','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Está dividida en dos mitades verticales iguales.', ['franjas:2','orient:v','mitades']),
@@ -517,9 +558,12 @@
                 H('M', 'Color extra', 'En el centro hay una luna en forma de C y una estrella, las dos de color rojo.', ['s:luna','luna:roja','s:estrella','estrella:roja']),
                 H('F', 'Naturaleza', 'En su desierto vive el fénec, un zorro pequeño con orejas enormes.'),
                 H('F', 'Comida', 'Su cuscús se sirve con cordero y garbanzos en salsa roja.'),
-                H('F', 'Monumentos', 'Tiene ruinas de una ciudad de la época romana llamada Timgad.')
+                H('F', 'Monumentos', 'Tiene ruinas de una ciudad de la época romana llamada Timgad.'),
+                H('F', 'Naturaleza', 'El Sáhara cubre la mayor parte de su territorio.'),
+                H('F', 'Naturaleza', 'Al norte tiene costa en el mar Mediterráneo.')
             ]},
             { id: "AGO", iso: "ao", nombre: "Angola",
+              datos: { capital: 'Luanda', moneda: 'el kwanza', idioma: 'portugués' },
               perfil: ['franjas:2','orient:h','iguales','mitades','c:rojo','c:negro','c:amarillo','ncolores:3','pos:arriba=rojo','pos:abajo=negro','s:estrella','estrella:amarilla','s:engranaje','simbolo:dorado','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene dos franjas horizontales iguales y un dibujo dorado en el centro.', ['franjas:2','orient:h','iguales','centro:dibujo','simbolo:dorado']),
@@ -528,9 +572,12 @@
                 H('M', 'Color extra', 'El dibujo del centro es amarillo y tiene una estrella y media rueda dentada.', ['centro:dibujo','simbolo:dorado','s:estrella','s:engranaje']),
                 H('F', 'Naturaleza', 'Su animal más especial es la palanca negra gigante, un antílope de cuernos largos y curvos.'),
                 H('F', 'Comida', 'Su plato típico es la muamba de galinha, pollo en salsa de aceite de palma.'),
-                H('F', 'Monumentos', 'Tiene un cañón llamado Mirador de la Luna.')
+                H('F', 'Monumentos', 'Tiene un cañón llamado Mirador de la Luna.'),
+                H('F', 'Naturaleza', 'El río Okavango forma parte de su frontera con Namibia.'),
+                H('F', 'Naturaleza', 'Su parque nacional más grande es el de Iona.')
             ]},
             { id: "MOZ", iso: "mz", nombre: "Mozambique",
+              datos: { capital: 'Maputo', moneda: 'el metical', idioma: 'portugués' },
               perfil: ['franjas:3','orient:h','c:verde','c:negro','c:amarillo','c:blanco','c:rojo','ncolores:5','s:fimbrias','s:triangulo','triangulo:rojo','pos:arriba=verde','pos:centro=negro','pos:abajo=amarillo','s:estrella','estrella:amarilla','s:libro'],
               pistas: [
                 H('D', 'Bandera', 'Tiene franjas horizontales separadas por líneas blancas delgadas y un triángulo junto al mástil.', ['orient:h','s:fimbrias','s:triangulo']),
@@ -539,9 +586,12 @@
                 H('M', 'Color extra', 'Dentro del triángulo rojo hay una estrella amarilla con un libro abierto.', ['s:triangulo','triangulo:rojo','s:estrella','estrella:amarilla','s:libro']),
                 H('F', 'Naturaleza', 'En sus sabanas viven elefantes africanos y en su mar el dugongo.'),
                 H('F', 'Comida', 'Es famoso por su pollo con salsa piri-piri, muy picante.'),
-                H('F', 'Comida', 'La matapa se prepara con hojas de yuca, cacahuete y gambas.')
+                H('F', 'Comida', 'La matapa se prepara con hojas de yuca, cacahuete y gambas.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional de Gorongosa, famoso por su fauna.'),
+                H('F', 'Naturaleza', 'Cerca de su capital está la bahía de Delagoa.')
             ]},
             { id: "ZAF", iso: "za", nombre: "Sudáfrica",
+              datos: { capital: 'Pretoria, Bloemfontein y Ciudad del Cabo', moneda: 'el rand', idioma: 'inglés, afrikáans y nueve lenguas más' },
               perfil: ['s:y','y:verde','c:verde','c:negro','c:amarillo','c:rojo','c:blanco','c:azul','ncolores:6','orient:h'],
               pistas: [
                 H('D', 'Bandera', 'Es una bandera con seis colores y una figura en forma de Y acostada.', ['ncolores:6','s:y']),
@@ -550,9 +600,11 @@
                 H('M', 'Color extra', 'Además del verde, usa negro, amarillo, rojo, blanco y azul: seis colores.', ['ncolores:6','c:verde','c:negro','c:amarillo','c:rojo','c:blanco','c:azul']),
                 H('F', 'Naturaleza', 'Su animal nacional es el springbok, una gacela saltarina.'),
                 H('F', 'Monumentos', 'Tiene una montaña con la cima plana como una mesa: Table Mountain.'),
-                H('F', 'Comida', 'Se come biltong, carne seca, y asados llamados braai.')
+                H('F', 'Comida', 'Se come biltong, carne seca, y asados llamados braai.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional Kruger, uno de los más famosos de África.')
             ]},
             { id: "EGY", iso: "eg", nombre: "Egipto",
+              datos: { capital: 'El Cairo', moneda: 'la libra egipcia', idioma: 'árabe' },
               perfil: ['franjas:3','orient:h','iguales','c:rojo','c:blanco','c:negro','c:amarillo','ncolores:4','pos:arriba=rojo','pos:centro=blanco','pos:abajo=negro','s:ave','s:aguila','ave:dorada','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y un ave dorada en el centro.', ['franjas:3','orient:h','s:ave','ave:dorada']),
@@ -561,9 +613,11 @@
                 H('M', 'Color extra', 'El ave del centro es un águila dorada sobre la franja blanca.', ['s:aguila','ave:dorada','pos:centro=blanco']),
                 H('F', 'Monumentos', 'Es famoso por sus enormes pirámides antiguas en Guiza.'),
                 H('F', 'Historia', 'Los antiguos faraones tienen sus tumbas en el Valle de los Reyes, en Luxor.'),
-                H('F', 'Comida', 'Su comida callejera favorita es el koshari: arroz, lentejas, fideos y garbanzos.')
+                H('F', 'Comida', 'Su comida callejera favorita es el koshari: arroz, lentejas, fideos y garbanzos.'),
+                H('F', 'Naturaleza', 'El río Nilo es esencial para sus cultivos desde hace miles de años.')
             ]},
             { id: "KEN", iso: "ke", nombre: "Kenia",
+              datos: { capital: 'Nairobi', moneda: 'el chelín keniano', idioma: 'suajili e inglés' },
               perfil: ['franjas:3','orient:h','c:negro','c:rojo','c:verde','c:blanco','ncolores:4','s:fimbrias','pos:arriba=negro','pos:centro=rojo','pos:abajo=verde','s:escudo','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales separadas por líneas blancas finas.', ['franjas:3','orient:h','s:fimbrias']),
@@ -572,11 +626,97 @@
                 H('M', 'Color extra', 'La franja roja del centro está bordeada por dos líneas blancas y lleva un dibujo ovalado rojo, negro y blanco.', ['pos:centro=rojo','s:fimbrias','centro:dibujo']),
                 H('F', 'Naturaleza', 'En sus sabanas viven leones y jirafas masái.'),
                 H('F', 'Monumentos', 'Lo cruza el Gran Valle del Rift, un valle enorme con lagos.'),
-                H('F', 'Comida', 'Se come ugali con sukuma wiki, un guiso de verduras.')
-            ]}
+                H('F', 'Comida', 'Se come ugali con sukuma wiki, un guiso de verduras.'),
+                H('F', 'Naturaleza', 'Su reserva más famosa es Maasai Mara, hogar de los Cinco Grandes.'),
+                H('F', 'Historia', 'Celebra el Festival Cultural de Lamu.')
+            ]},
+            { id: "TUN", iso: "tn", nombre: "Túnez",
+              datos: { capital: 'Túnez', moneda: 'el dinar tunecino', idioma: 'árabe' },
+              perfil: ['nofranjas','fondo:rojo','c:rojo','c:blanco','ncolores:2','s:circulo','circulo:blanco','circulo:centro','s:luna','luna:roja','s:estrella','estrella:roja','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Su fondo es rojo y tiene un círculo blanco en el centro.', ['fondo:rojo','s:circulo','circulo:blanco','circulo:centro']),
+                H('D', 'Bandera', 'Dentro de un círculo hay una luna y una estrella.', ['s:circulo','s:luna','s:estrella']),
+                H('M', 'Color extra', 'Fondo rojo con un círculo blanco en el centro; dentro, una luna y una estrella rojas.', ['fondo:rojo','circulo:blanco','luna:roja','estrella:roja']),
+                H('M', 'Color extra', 'Solo usa dos colores: rojo y blanco. La luna y la estrella son rojas.', ['c:rojo','c:blanco','ncolores:2','luna:roja','estrella:roja']),
+                H('F', 'Monumentos', 'Cerca de su capital están las ruinas de una ciudad antigua llamada Cartago.'),
+                H('F', 'Naturaleza', 'Al sur del país empieza el desierto del Sáhara.'),
+                H('F', 'Historia', 'Cada año celebra el Festival Internacional de Cartago.')
+              ]},
+            { id: "CMR", iso: "cm", nombre: "Camerún",
+              datos: { capital: 'Yaundé', moneda: 'el franco CFA de África Central', idioma: 'francés e inglés' },
+              perfil: ['franjas:3','orient:v','iguales','c:verde','c:rojo','c:amarillo','ncolores:3','pos:izq=verde','pos:centro=rojo','pos:der=amarillo','s:estrella','estrella:amarilla','estrella:centro','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas verticales y la del centro es roja.', ['franjas:3','orient:v','pos:centro=rojo']),
+                H('D', 'Bandera', 'Sobre su franja roja del centro hay una estrella amarilla.', ['pos:centro=rojo','s:estrella','estrella:amarilla']),
+                H('M', 'Color extra', 'Franjas verticales verde, roja y amarilla con una estrella amarilla en el centro.', ['pos:izq=verde','pos:centro=rojo','pos:der=amarillo','estrella:amarilla']),
+                H('M', 'Color extra', 'Su primera franja es verde y la última amarilla.', ['pos:izq=verde','pos:der=amarillo']),
+                H('F', 'Naturaleza', 'Parte del lago Chad está en su territorio.'),
+                H('F', 'Historia', 'A su selección de fútbol le dicen los Leones Indomables.')
+              ]},
+            { id: "CIV", iso: "ci", nombre: "Costa de Marfil",
+              datos: { capital: 'Yamusukro', moneda: 'el franco CFA de África Occidental', idioma: 'francés' },
+              perfil: ['franjas:3','orient:v','iguales','c:naranja','c:blanco','c:verde','ncolores:3','pos:izq=naranja','pos:centro=blanco','pos:der=verde','s:ninguno'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas verticales y la primera es naranja.', ['franjas:3','orient:v','pos:izq=naranja']),
+                H('D', 'Bandera', 'Sus tres franjas verticales son iguales y no lleva ningún dibujo.', ['franjas:3','orient:v','iguales','s:ninguno']),
+                H('M', 'Color extra', 'Tres franjas verticales: naranja, blanca y verde, sin ningún dibujo.', ['pos:izq=naranja','pos:centro=blanco','pos:der=verde','s:ninguno']),
+                H('M', 'Color extra', 'La franja del centro es blanca y la última es verde.', ['pos:centro=blanco','pos:der=verde']),
+                H('F', 'Comida', 'Es el país que más cacao produce en todo el mundo.'),
+                H('F', 'Naturaleza', 'Sus playas dan al océano Atlántico.'),
+                H('F', 'Naturaleza', 'Uno de sus países vecinos es Ghana.')
+              ]},
+            { id: "UGA", iso: "ug", nombre: "Uganda",
+              datos: { capital: 'Kampala', moneda: 'el chelín ugandés', idioma: 'suajili e inglés' },
+              perfil: ['franjas:6','orient:h','c:negro','c:amarillo','c:rojo','c:blanco','ncolores:4','franjas-colores:3','s:circulo','circulo:blanco','circulo:centro','s:ave','ave:grulla','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene seis franjas horizontales.', ['franjas:6','orient:h']),
+                H('D', 'Bandera', 'En el centro tiene un círculo blanco con un ave.', ['s:circulo','circulo:blanco','s:ave']),
+                H('M', 'Color extra', 'Seis franjas negras, amarillas y rojas que se repiten, con un círculo blanco en el centro.', ['franjas:6','c:negro','c:amarillo','c:rojo','circulo:blanco']),
+                H('M', 'Color extra', 'Dentro del círculo blanco hay una grulla con una cresta de colores.', ['circulo:blanco','ave:grulla']),
+                H('F', 'Naturaleza', 'Comparte el lago Victoria, el más grande de África, con Kenia y Tanzania.'),
+                H('F', 'Naturaleza', 'El río Nilo atraviesa el país.'),
+                H('F', 'Naturaleza', 'Tiene un parque famoso por su fauna llamado Bosque Impenetrable de Bwindi.')
+              ]},
+            { id: "ZMB", iso: "zm", nombre: "Zambia",
+              datos: { capital: 'Lusaka', moneda: 'el kwacha', idioma: 'inglés' },
+              perfil: ['fondo:verde','c:verde','c:rojo','c:negro','c:naranja','ncolores:4','s:franjas-esquina','s:ave','s:aguila','ave:naranja','esquina:abajo-derecha'],
+              pistas: [
+                H('D', 'Bandera', 'Su fondo es verde y los dibujos están en la esquina de abajo a la derecha.', ['fondo:verde','esquina:abajo-derecha']),
+                H('D', 'Bandera', 'Tiene un águila naranja volando sobre tres franjas pequeñas.', ['s:aguila','ave:naranja','s:franjas-esquina']),
+                H('M', 'Color extra', 'Fondo verde con tres franjas pequeñas roja, negra y naranja en la esquina inferior derecha, y un águila naranja encima.', ['fondo:verde','c:rojo','c:negro','c:naranja','ave:naranja']),
+                H('M', 'Color extra', 'Las tres franjas pequeñas de la esquina son roja, negra y naranja.', ['s:franjas-esquina','c:rojo','c:negro','c:naranja']),
+                H('F', 'Naturaleza', 'Las cataratas Victoria están en su frontera con Zimbabue.'),
+                H('F', 'Naturaleza', 'Al norte del país está el lago Tanganica.'),
+                H('F', 'Naturaleza', 'Su parque nacional más famoso es South Luangwa.')
+              ]},
+            { id: "NAM", iso: "na", nombre: "Namibia",
+              datos: { capital: 'Windhoek', moneda: 'el dólar namibio', idioma: 'inglés' },
+              perfil: ['orient:diag','s:diag','diag:roja','diag:bordes-blancos','c:azul','c:verde','c:rojo','c:blanco','c:amarillo','ncolores:5','s:triangulo','triangulo:azul','triangulo:verde','s:sol','sol:dorado','sol:esquina'],
+              pistas: [
+                H('D', 'Bandera', 'Está cruzada en diagonal por una banda roja.', ['s:diag','diag:roja']),
+                H('D', 'Bandera', 'Tiene un sol dorado en la esquina de arriba, junto al mástil.', ['s:sol','sol:dorado','sol:esquina']),
+                H('M', 'Color extra', 'Una banda roja con bordes blancos la cruza en diagonal; arriba es azul con un sol dorado y abajo es verde.', ['diag:roja','diag:bordes-blancos','triangulo:azul','triangulo:verde','sol:dorado']),
+                H('M', 'Color extra', 'Usa cinco colores: azul, rojo, verde, blanco y amarillo.', ['ncolores:5','c:azul','c:rojo','c:verde','c:blanco','c:amarillo']),
+                H('F', 'Naturaleza', 'Un desierto llamado Namib cubre gran parte del país.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional Etosha, famoso por su fauna y sus salinas.'),
+                H('F', 'Historia', 'Celebra el festival Omagongo, una fiesta tradicional.')
+              ]},
+            { id: "SYC", iso: "sc", nombre: "Seychelles",
+              datos: { capital: 'Victoria', moneda: 'la rupia de Seychelles', idioma: 'criollo seychelense, inglés y francés' },
+              perfil: ['orient:diag','franjas:5','s:rayos','forma:abanico','c:azul','c:amarillo','c:rojo','c:blanco','c:verde','ncolores:5','s:ninguno'],
+              pistas: [
+                H('D', 'Bandera', 'Sus franjas salen en abanico desde una esquina, como rayos.', ['s:rayos','forma:abanico']),
+                H('D', 'Bandera', 'Tiene cinco franjas inclinadas de cinco colores distintos.', ['franjas:5','orient:diag','ncolores:5']),
+                H('M', 'Color extra', 'Cinco rayos de colores salen desde la esquina inferior izquierda: azul, amarillo, rojo, blanco y verde.', ['s:rayos','c:azul','c:amarillo','c:rojo','c:blanco','c:verde']),
+                H('M', 'Color extra', 'Sus rayos de colores no llevan ningún dibujo encima.', ['s:rayos','s:ninguno']),
+                H('F', 'Naturaleza', 'Su playa más famosa se llama Anse Source d\'Argent.'),
+                H('F', 'Historia', 'Cada año celebra el Festival Kreol.'),
+                H('F', 'Naturaleza', 'Es un país de islas y su ciudad principal se llama Victoria.')
+              ]}
         ],
         "America": [
             { id: "ARG", iso: "ar", nombre: "Argentina",
+              datos: { capital: 'Buenos Aires', moneda: 'el peso argentino', idioma: 'español' },
               perfil: ['franjas:3','orient:h','iguales','c:celeste','c:blanco','c:amarillo','ncolores:3','franjas-colores:2','pos:arriba=celeste','pos:centro=blanco','pos:abajo=celeste','s:sol','sol:dorado','sol:cara','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y un sol en el centro.', ['franjas:3','orient:h','s:sol']),
@@ -586,9 +726,15 @@
                 H('F', 'Monumentos', 'Comparte con su vecino las gigantescas Cataratas de Iguazú.'),
                 H('F', 'Monumentos', 'Su capital tiene un obelisco enorme muy famoso.'),
                 H('F', 'Naturaleza', 'Tiene un glaciar gigante llamado Perito Moreno.'),
-                H('F', 'Comida', 'Aquí se come asado, empanadas y alfajores de dulce de leche.')
+                H('F', 'Comida', 'Aquí se come asado, empanadas y alfajores de dulce de leche.'),
+                H('F', 'Naturaleza', 'La cordillera de los Andes forma su frontera del oeste.'),
+                H('F', 'Historia', 'Su baile nacional es el tango.'),
+                H('F', 'Naturaleza', 'Su montaña más alta es el Aconcagua.'),
+                H('F', 'Naturaleza', 'Su río más grande es el Paraná.'),
+                H('F', 'Historia', 'Ganó su primera Copa Mundial de fútbol en 1978.')
             ]},
             { id: "BRA", iso: "br", nombre: "Brasil",
+              datos: { capital: 'Brasilia', moneda: 'el real', idioma: 'portugués' },
               perfil: ['nofranjas','fondo:verde','c:verde','c:amarillo','c:azul','c:blanco','ncolores:4','s:rombo','rombo:amarillo','s:circulo','circulo:azul','s:estrellas','estrellas:blancas','s:frase','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es verde con un rombo amarillo.', ['fondo:verde','s:rombo','rombo:amarillo']),
@@ -598,9 +744,13 @@
                 H('F', 'Naturaleza', 'Gran parte de la increíble selva del Amazonas está aquí.'),
                 H('F', 'Naturaleza', 'En su selva viven jaguares y guacamayos jacinto, de plumas azules.'),
                 H('F', 'Comida', 'Su plato típico es la feijoada, frijoles negros con carne, y el pão de queijo.'),
-                H('F', 'Monumentos', 'Su playa más famosa se llama Copacabana y tiene un cerro llamado Pan de Azúcar.')
+                H('F', 'Monumentos', 'Su playa más famosa se llama Copacabana y tiene un cerro llamado Pan de Azúcar.'),
+                H('F', 'Naturaleza', 'El Amazonas es su río más grande.'),
+                H('F', 'Historia', 'La ciudad de Río de Janeiro es famosa por su carnaval.'),
+                H('F', 'Naturaleza', 'La Serra do Mar recorre su costa este.')
             ]},
             { id: "MEX", iso: "mx", nombre: "México",
+              datos: { capital: 'Ciudad de México', moneda: 'el peso mexicano', idioma: 'español' },
               perfil: ['franjas:3','orient:v','iguales','c:verde','c:blanco','c:rojo','ncolores:3','pos:izq=verde','pos:centro=blanco','pos:der=rojo','s:escudo','escudo:centro','s:aguila','s:ave','s:serpiente','s:nopal','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales y un escudo en el centro.', ['franjas:3','orient:v','s:escudo','escudo:centro']),
@@ -610,9 +760,12 @@
                 H('F', 'Comida', 'Aquí nacieron los tacos al pastor y el mole.'),
                 H('F', 'Monumentos', 'Tiene una pirámide antigua llamada Chichén Itzá.'),
                 H('F', 'Naturaleza', 'En sus lagos vive el ajolote, un animal acuático muy curioso.'),
-                H('F', 'Naturaleza', 'Su ave nacional es el águila real.')
+                H('F', 'Naturaleza', 'Su ave nacional es el águila real.'),
+                H('F', 'Historia', 'Celebra el Día de Muertos con altares y flores de cempasúchil.'),
+                H('F', 'Monumentos', 'Tiene una ciudad antigua con pirámides llamada Teotihuacán.')
             ]},
             { id: "COL", iso: "co", nombre: "Colombia",
+              datos: { capital: 'Bogotá', moneda: 'el peso colombiano', idioma: 'español' },
               perfil: ['franjas:3','orient:h','arriba-ancha','c:amarillo','c:azul','c:rojo','ncolores:3','pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y la de arriba es el doble de ancha.', ['franjas:3','orient:h','arriba-ancha']),
@@ -621,9 +774,13 @@
                 H('M', 'Color extra', 'La franja amarilla ocupa la mitad de la bandera; las otras dos, azul y roja, son más delgadas.', ['arriba-ancha','pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo']),
                 H('F', 'Comida', 'Se come bandeja paisa con frijoles y chicharrón, y arepas.'),
                 H('F', 'Naturaleza', 'En sus montañas viven el cóndor y el oso de anteojos.'),
-                H('F', 'Comida', 'El ajiaco es una sopa de pollo y papa típica de su capital, Bogotá.')
+                H('F', 'Comida', 'El ajiaco es una sopa de pollo y papa típica de su capital, Bogotá.'),
+                H('D', 'Bandera', 'Tiene tres franjas horizontales, la de arriba más ancha, y ningún dibujo.', ['franjas:3','orient:h','arriba-ancha','s:ninguno']),
+                H('F', 'Historia', 'Celebra el Carnaval de Barranquilla.'),
+                H('F', 'Naturaleza', 'Tiene una región famosa por su café llamada Triángulo Cafetero.')
             ]},
             { id: "PER", iso: "pe", nombre: "Perú",
+              datos: { capital: 'Lima', moneda: 'el sol peruano', idioma: 'español, quechua y aimara' },
               perfil: ['franjas:3','orient:v','iguales','c:rojo','c:blanco','ncolores:2','franjas-colores:2','pos:izq=rojo','pos:centro=blanco','pos:der=rojo','s:ninguno','s:escudo-estatal'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales y las dos de los lados son iguales.', ['franjas:3','orient:v','pos:izq=rojo','pos:der=rojo']),
@@ -636,6 +793,7 @@
                 H('F', 'Historia', 'Aquí vivieron los incas, cuya capital era Cusco.')
             ]},
             { id: "CHL", iso: "cl", nombre: "Chile",
+              datos: { capital: 'Santiago', moneda: 'el peso chileno', idioma: 'español' },
               perfil: ['franjas:2','orient:h','c:blanco','c:rojo','c:azul','ncolores:3','pos:arriba=blanco','pos:abajo=rojo','s:canton','canton:azul','s:estrella','estrella:blanca'],
               pistas: [
                 H('D', 'Bandera', 'Tiene dos franjas horizontales y un cuadrado azul en una esquina.', ['franjas:2','orient:h','s:canton','canton:azul']),
@@ -645,9 +803,11 @@
                 H('F', 'Monumentos', 'En una de sus islas hay estatuas gigantes de piedra llamadas moáis.'),
                 H('F', 'Naturaleza', 'Tiene el desierto de Atacama, uno de los más secos del mundo.'),
                 H('F', 'Monumentos', 'Tiene unas montañas puntiagudas famosas: las Torres del Paine.'),
-                H('F', 'Comida', 'Se come pastel de choclo y empanadas de pino.')
+                H('F', 'Comida', 'Se come pastel de choclo y empanadas de pino.'),
+                H('F', 'Historia', 'Cada año celebra el Festival de Viña del Mar, con música y baile.')
             ]},
             { id: "USA", iso: "us", nombre: "Estados Unidos",
+              datos: { capital: 'Washington D. C.', moneda: 'el dólar estadounidense', idioma: 'inglés' },
               perfil: ['franjas:13','orient:h','c:rojo','c:blanco','c:azul','ncolores:3','franjas-colores:2','s:canton','canton:azul','s:estrellas','estrellas:blancas'],
               pistas: [
                 H('D', 'Bandera', 'Tiene muchas franjas horizontales y un rectángulo azul en la esquina.', ['franjas:13','orient:h','s:canton','canton:azul']),
@@ -657,9 +817,12 @@
                 H('F', 'Monumentos', 'Tiene una estatua gigante de color verde con una antorcha: la Estatua de la Libertad.'),
                 H('F', 'Comida', 'Es famoso por las hamburguesas y la tarta de manzana.'),
                 H('F', 'Naturaleza', 'Su ave nacional es el águila calva.'),
-                H('F', 'Monumentos', 'Tiene una montaña con cuatro caras gigantes talladas en la roca: el Monte Rushmore.')
+                H('F', 'Monumentos', 'Tiene una montaña con cuatro caras gigantes talladas en la roca: el Monte Rushmore.'),
+                H('F', 'Naturaleza', 'Su río más grande es el Mississippi.'),
+                H('F', 'Historia', 'Su himno se llama The Star-Spangled Banner.')
             ]},
             { id: "CAN", iso: "ca", nombre: "Canadá",
+              datos: { capital: 'Ottawa', moneda: 'el dólar canadiense', idioma: 'inglés y francés' },
               perfil: ['franjas:3','orient:v','centro-ancha','c:rojo','c:blanco','ncolores:2','franjas-colores:2','pos:izq=rojo','pos:centro=blanco','pos:der=rojo','s:hoja','hoja:roja','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Solo tiene dos colores y una hoja en el centro.', ['ncolores:2','s:hoja']),
@@ -669,9 +832,12 @@
                 H('F', 'Comida', 'Aquí se hace el jarabe de arce que se pone en los hot cakes.'),
                 H('F', 'Naturaleza', 'Sus animales típicos son el castor y el alce.'),
                 H('F', 'Monumentos', 'Tiene las famosas Cataratas del Niágara.'),
-                H('F', 'Comida', 'Su plato típico es la poutine: papas fritas con queso y salsa.')
+                H('F', 'Comida', 'Su plato típico es la poutine: papas fritas con queso y salsa.'),
+                H('F', 'Monumentos', 'Su ciudad más grande es Toronto.'),
+                H('F', 'Naturaleza', 'Su río más largo es el Mackenzie.')
             ]},
             { id: "URY", iso: "uy", nombre: "Uruguay",
+              datos: { capital: 'Montevideo', moneda: 'el peso uruguayo', idioma: 'español' },
               perfil: ['franjas:9','orient:h','c:blanco','c:azul','c:amarillo','ncolores:3','franjas-colores:2','s:canton','canton:blanco','s:sol','sol:dorado','sol:cara'],
               pistas: [
                 H('D', 'Bandera', 'Tiene nueve franjas horizontales y un sol en la esquina.', ['franjas:9','orient:h','s:sol','s:canton']),
@@ -681,9 +847,13 @@
                 H('F', 'Comida', 'Su sándwich más famoso es el chivito, con carne, panceta y huevo.'),
                 H('F', 'Naturaleza', 'En sus costas viven lobos marinos.'),
                 H('F', 'Monumentos', 'Tiene una construcción blanca de formas curvas junto al mar llamada Casapueblo.'),
-                H('F', 'Comida', 'Se toma mate y se comen alfajores de maicena.')
+                H('F', 'Comida', 'Se toma mate y se comen alfajores de maicena.'),
+                H('F', 'Monumentos', 'Su ciudad de playa más famosa es Punta del Este.'),
+                H('F', 'Naturaleza', 'El Río de la Plata forma parte de su frontera con Argentina.'),
+                H('F', 'Historia', 'Su música y baile tradicional es el candombe.')
             ]},
             { id: "CUB", iso: "cu", nombre: "Cuba",
+              datos: { capital: 'La Habana', moneda: 'el peso cubano', idioma: 'español' },
               perfil: ['franjas:5','orient:h','c:azul','c:blanco','c:rojo','ncolores:3','franjas-colores:2','s:triangulo','triangulo:rojo','s:estrella','estrella:blanca'],
               pistas: [
                 H('D', 'Bandera', 'Tiene cinco franjas horizontales y un triángulo junto al mástil.', ['franjas:5','orient:h','s:triangulo']),
@@ -692,9 +862,12 @@
                 H('M', 'Color extra', 'Dentro del triángulo rojo hay una estrella blanca.', ['s:triangulo','triangulo:rojo','s:estrella','estrella:blanca']),
                 H('F', 'Naturaleza', 'Su ave nacional es el tocororo, con plumas rojas, azules y blancas.'),
                 H('F', 'Comida', 'Se come ropa vieja: carne deshebrada con arroz y frijoles negros.'),
-                H('F', 'Comida', 'Se come yuca con mojo, una salsa de ajo y limón.')
+                H('F', 'Comida', 'Se come yuca con mojo, una salsa de ajo y limón.'),
+                H('F', 'Historia', 'La salsa es su música y baile más famoso.'),
+                H('F', 'Naturaleza', 'Tiene una isla famosa por sus playas llamada Isla de la Juventud.')
             ]},
             { id: "BOL", iso: "bo", nombre: "Bolivia",
+              datos: { capital: 'Sucre', moneda: 'el boliviano', idioma: 'español, quechua, aimara y otras lenguas' },
               perfil: ['franjas:3','orient:h','iguales','c:rojo','c:amarillo','c:verde','ncolores:3','pos:arriba=rojo','pos:centro=amarillo','pos:abajo=verde','s:ninguno','s:escudo-estatal'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales del mismo tamaño.', ['franjas:3','orient:h','iguales']),
@@ -703,9 +876,13 @@
                 H('M', 'Color extra', 'En su versión oficial lleva un escudo con un cóndor y una montaña.', ['s:escudo-estatal']),
                 H('F', 'Comida', 'Sus empanadas jugosas se llaman salteñas.'),
                 H('F', 'Naturaleza', 'En su altiplano viven llamas y flamencos rosados.'),
-                H('F', 'Monumentos', 'Tiene ruinas muy antiguas llamadas Tiwanaku.')
+                H('F', 'Monumentos', 'Tiene ruinas muy antiguas llamadas Tiwanaku.'),
+                H('F', 'Naturaleza', 'Su lago más grande es el Titicaca.'),
+                H('F', 'Historia', 'Celebra el Carnaval de Oruro, con trajes y danzas.'),
+                H('F', 'Naturaleza', 'No tiene salida al mar.')
             ]},
             { id: "CRI", iso: "cr", nombre: "Costa Rica",
+              datos: { capital: 'San José', moneda: 'el colón', idioma: 'español' },
               perfil: ['franjas:5','orient:h','centro-ancha','c:azul','c:blanco','c:rojo','ncolores:3','pos:arriba=azul','pos:centro=rojo','pos:abajo=azul','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene cinco franjas horizontales y la del centro es la más ancha.', ['franjas:5','orient:h','centro-ancha']),
@@ -714,9 +891,12 @@
                 H('M', 'Color extra', 'La franja roja del centro es el doble de ancha que las demás.', ['pos:centro=rojo','centro-ancha']),
                 H('F', 'Comida', 'Su desayuno típico es el gallo pinto: arroz con frijoles.'),
                 H('F', 'Naturaleza', 'En sus selvas viven perezosos y ranas de ojos rojos.'),
-                H('F', 'Monumentos', 'Su capital tiene un elegante Teatro Nacional.')
+                H('F', 'Monumentos', 'Su capital tiene un elegante Teatro Nacional.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional Manuel Antonio, lleno de animales.'),
+                H('F', 'Naturaleza', 'El volcán Arenal es uno de los más activos del país.')
             ]},
             { id: "GTM", iso: "gt", nombre: "Guatemala",
+              datos: { capital: 'Ciudad de Guatemala', moneda: 'el quetzal', idioma: 'español' },
               perfil: ['franjas:3','orient:v','iguales','c:celeste','c:blanco','franjas-colores:2','pos:izq=celeste','pos:centro=blanco','pos:der=celeste','s:escudo','escudo:centro','s:quetzal','s:ave','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales y un escudo en el centro.', ['franjas:3','orient:v','s:escudo','escudo:centro']),
@@ -728,6 +908,7 @@
                 H('F', 'Comida', 'Su guiso tradicional se llama pepián y se hace con semillas tostadas.')
             ]},
             { id: "JAM", iso: "jm", nombre: "Jamaica",
+              datos: { capital: 'Kingston', moneda: 'el dólar jamaiquino', idioma: 'inglés' },
               perfil: ['s:x','x:dorada','c:amarillo','c:verde','c:negro','ncolores:3','s:triangulo','sin-rba'],
               pistas: [
                 H('D', 'Bandera', 'Tiene una X dorada que la divide en cuatro triángulos.', ['s:x','x:dorada','s:triangulo']),
@@ -736,9 +917,12 @@
                 H('M', 'Color extra', 'Los triángulos de arriba y abajo son verdes; los de los lados, negros.', ['s:triangulo','c:verde','c:negro']),
                 H('F', 'Comida', 'Su pollo jerk se cocina ahumado con muchas especias.'),
                 H('F', 'Naturaleza', 'Su ave nacional es un colibrí con cola larga llamado "ave doctor".'),
-                H('F', 'Comida', 'Su desayuno típico es ackee con bacalao.')
+                H('F', 'Comida', 'Su desayuno típico es ackee con bacalao.'),
+                H('F', 'Historia', 'Celebra el Reggae Sumfest, un festival de música reggae.'),
+                H('F', 'Naturaleza', 'Tiene unas cascadas famosas llamadas Dunn\'s River.')
             ]},
             { id: "TTO", iso: "tt", nombre: "Trinidad y Tobago",
+              datos: { capital: 'Puerto España', moneda: 'el dólar de Trinidad y Tobago', idioma: 'inglés' },
               perfil: ['nofranjas','fondo:rojo','s:diag','diag:negra','diag:bordes-blancos','c:rojo','c:negro','c:blanco','ncolores:3'],
               pistas: [
                 H('D', 'Bandera', 'Tiene fondo rojo con una banda diagonal.', ['fondo:rojo','s:diag']),
@@ -747,9 +931,12 @@
                 H('M', 'Color extra', 'La banda diagonal va desde la esquina superior izquierda hasta la inferior derecha.', ['s:diag','diag:negra']),
                 H('F', 'Naturaleza', 'Su ave nacional es el ibis escarlata, de plumas rojas brillantes.'),
                 H('F', 'Comida', 'Su comida callejera favorita son los doubles: pan frito con curry de garbanzos.'),
-                H('F', 'Comida', 'Se come "bake and shark", un sándwich de tiburón frito.')
+                H('F', 'Comida', 'Se come "bake and shark", un sándwich de tiburón frito.'),
+                H('F', 'Historia', 'Su carnaval es famoso por sus desfiles llenos de color.'),
+                H('F', 'Naturaleza', 'Su cordillera principal se llama Cordillera del Norte.')
             ]},
             { id: "DMA", iso: "dm", nombre: "Dominica",
+              datos: { capital: 'Roseau', moneda: 'el dólar del Caribe Oriental', idioma: 'inglés' },
               perfil: ['fondo:verde','s:cruz','cruz:tricolor','s:circulo','circulo:rojo','s:loro','s:ave','s:estrellas','estrellas:verdes','c:verde','c:amarillo','c:negro','c:blanco','c:rojo','ncolores:6','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene fondo verde con una cruz de tres colores.', ['fondo:verde','s:cruz','cruz:tricolor']),
@@ -758,11 +945,62 @@
                 H('M', 'Color extra', 'La cruz es amarilla, negra y blanca, y el círculo rojo tiene diez estrellas verdes.', ['cruz:tricolor','circulo:rojo','s:estrellas','estrellas:verdes']),
                 H('F', 'Naturaleza', 'Su ave nacional es el loro sisserou, con pecho morado.'),
                 H('F', 'Comida', 'Su sopa típica es el callaloo, hecha con hojas verdes y cangrejo.'),
-                H('F', 'Comida', 'Se come pescado frito con plátano maduro.')
-            ]}
+                H('F', 'Comida', 'Se come pescado frito con plátano maduro.'),
+                H('F', 'Naturaleza', 'Tiene un lago de agua hirviente.'),
+                H('F', 'Naturaleza', 'Su Parque Nacional Morne Trois Pitons está lleno de selva.')
+            ]},
+            { id: "PAN", iso: "pa", nombre: "Panamá",
+              datos: { capital: 'Ciudad de Panamá', moneda: 'el balboa', idioma: 'español' },
+              perfil: ['forma:cuarteles','cuarteles:4','c:blanco','c:rojo','c:azul','ncolores:3','s:estrellas','estrellas:2','estrella:azul','estrella:roja'],
+              pistas: [
+                H('D', 'Bandera', 'Está dividida en cuatro rectángulos iguales.', ['forma:cuarteles','cuarteles:4']),
+                H('D', 'Bandera', 'Tiene dos estrellas de distinto color, cada una en un rectángulo blanco.', ['s:estrellas','estrellas:2','estrella:azul','estrella:roja']),
+                H('M', 'Color extra', 'Cuatro rectángulos: blanco con estrella azul, rojo, azul y blanco con estrella roja.', ['forma:cuarteles','c:blanco','c:rojo','c:azul','estrella:azul','estrella:roja']),
+                H('M', 'Color extra', 'Sus colores son blanco, rojo y azul, y sus dos estrellas son una azul y una roja.', ['c:blanco','c:rojo','c:azul','estrella:azul','estrella:roja']),
+                H('F', 'Monumentos', 'Tiene un canal famoso que une el océano Atlántico con el Pacífico.'),
+                H('F', 'Historia', 'Celebra un carnaval con trajes coloridos y mucha música.'),
+                H('F', 'Historia', 'El pueblo guna hace unos textiles tradicionales llamados molas.')
+              ]},
+            { id: "ECU", iso: "ec", nombre: "Ecuador",
+              datos: { capital: 'Quito', moneda: 'el dólar estadounidense', idioma: 'español' },
+              perfil: ['franjas:3','orient:h','arriba-ancha','c:amarillo','c:azul','c:rojo','ncolores:3','pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo','s:escudo','escudo:centro','s:ave','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas horizontales, la de arriba más ancha, y un escudo en el centro.', ['franjas:3','orient:h','arriba-ancha','s:escudo']),
+                H('D', 'Bandera', 'Sus colores son amarillo, azul y rojo, y lleva un escudo con un ave.', ['c:amarillo','c:azul','c:rojo','s:escudo','s:ave']),
+                H('M', 'Color extra', 'Franja amarilla ancha arriba, azul en medio y roja abajo, con un escudo en el centro.', ['pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo','escudo:centro']),
+                H('M', 'Color extra', 'Sobre su escudo del centro hay un ave con las alas abiertas.', ['s:escudo','s:ave']),
+                H('F', 'Naturaleza', 'Las islas Galápagos son parte de su territorio.'),
+                H('F', 'Naturaleza', 'Su pico más alto es el Chimborazo.'),
+                H('F', 'Naturaleza', 'La línea ecuatorial, que divide la Tierra en dos mitades, cruza el país.')
+              ]},
+            { id: "VEN", iso: "ve", nombre: "Venezuela",
+              datos: { capital: 'Caracas', moneda: 'el bolívar', idioma: 'español' },
+              perfil: ['franjas:3','orient:h','iguales','c:amarillo','c:azul','c:rojo','c:blanco','ncolores:4','pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo','s:estrellas','estrellas:blancas','estrellas:8','estrellas:arco','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas horizontales iguales y un arco de estrellas en el centro.', ['franjas:3','orient:h','iguales','s:estrellas','estrellas:arco']),
+                H('D', 'Bandera', 'Sus ocho estrellas blancas forman un arco sobre la franja del centro.', ['estrellas:8','estrellas:blancas','estrellas:arco']),
+                H('M', 'Color extra', 'Franjas amarilla, azul y roja del mismo tamaño, con ocho estrellas blancas en arco sobre la azul.', ['pos:arriba=amarillo','pos:centro=azul','pos:abajo=rojo','iguales','estrellas:8']),
+                H('M', 'Color extra', 'Las estrellas están sobre la franja azul y son blancas.', ['pos:centro=azul','estrellas:blancas']),
+                H('F', 'Naturaleza', 'Tiene el Salto Ángel, la cascada más alta del mundo.'),
+                H('F', 'Comida', 'Su comida más popular es la arepa, hecha con harina de maíz.'),
+                H('F', 'Historia', 'El beisbolista Miguel Cabrera nació ahí y jugó en las Grandes Ligas.')
+              ]},
+            { id: "BHS", iso: "bs", nombre: "Bahamas",
+              datos: { capital: 'Nassau', moneda: 'el dólar bahameño', idioma: 'inglés' },
+              perfil: ['franjas:3','orient:h','iguales','c:azul','c:amarillo','c:negro','ncolores:3','pos:arriba=azul','pos:centro=amarillo','pos:abajo=azul','s:triangulo','triangulo:negro'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas horizontales y un triángulo negro junto al mástil.', ['franjas:3','orient:h','s:triangulo','triangulo:negro']),
+                H('D', 'Bandera', 'Sus franjas de arriba y abajo son de un azul turquesa y la del centro es amarilla.', ['pos:arriba=azul','pos:centro=amarillo','pos:abajo=azul']),
+                H('M', 'Color extra', 'Franjas azul turquesa, amarilla y azul turquesa con un triángulo negro junto al mástil.', ['pos:arriba=azul','pos:centro=amarillo','pos:abajo=azul','triangulo:negro']),
+                H('M', 'Color extra', 'Usa tres colores: azul turquesa, amarillo y negro.', ['c:azul','c:amarillo','c:negro','ncolores:3']),
+                H('F', 'Naturaleza', 'Está formado por unas 700 islas.'),
+                H('F', 'Naturaleza', 'Su isla más grande se llama Andros.'),
+                H('F', 'Historia', 'Cristóbal Colón desembarcó en una de sus islas en 1492.')
+              ]}
         ],
         "Asia": [
             { id: "JPN", iso: "jp", nombre: "Japón",
+              datos: { capital: 'Tokio', moneda: 'el yen', idioma: 'japonés' },
               perfil: ['nofranjas','fondo:blanco','c:blanco','c:rojo','ncolores:2','s:circulo','circulo:rojo','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es completamente blanco con una sola figura.', ['nofranjas','fondo:blanco','centro:dibujo']),
@@ -772,9 +1010,13 @@
                 H('F', 'Monumentos', 'Su montaña más famosa es el Monte Fuji, un volcán con la punta nevada.'),
                 H('F', 'Comida', 'Aquí nacieron el sushi y el ramen.'),
                 H('F', 'Naturaleza', 'En sus bosques viven el faisán verde y el oso negro.'),
-                H('F', 'Comida', 'La tempura es su fritura crujiente de verduras y mariscos.')
+                H('F', 'Comida', 'La tempura es su fritura crujiente de verduras y mariscos.'),
+                H('F', 'Historia', 'Su deporte nacional es el sumo.'),
+                H('F', 'Monumentos', 'Su tren bala se llama Shinkansen.'),
+                H('F', 'Historia', 'En primavera celebra el hanami, la fiesta de los cerezos en flor.')
             ]},
             { id: "CHN", iso: "cn", nombre: "China",
+              datos: { capital: 'Pekín', moneda: 'el yuan', idioma: 'mandarín' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:amarillo','ncolores:2','s:estrellas','estrellas:amarillas','estrellas:esquina'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es rojo y tiene cinco estrellas.', ['fondo:rojo','s:estrellas']),
@@ -784,9 +1026,12 @@
                 H('F', 'Monumentos', 'Tiene una muralla tan larga que cruza montañas enteras.'),
                 H('F', 'Naturaleza', 'Es el hogar del panda gigante.'),
                 H('F', 'Comida', 'Su plato más famoso es el pato laqueado, de piel crujiente.'),
-                H('F', 'Monumentos', 'En su capital hay un palacio enorme llamado la Ciudad Prohibida.')
+                H('F', 'Monumentos', 'En su capital hay un palacio enorme llamado la Ciudad Prohibida.'),
+                H('F', 'Historia', 'Celebra el Año Nuevo Chino en febrero o marzo.'),
+                H('F', 'Comida', 'Sus empanadillas rellenas se llaman jiaozi.')
             ]},
             { id: "IND", iso: "in", nombre: "India",
+              datos: { capital: 'Nueva Delhi', moneda: 'la rupia india', idioma: 'hindi e inglés' },
               perfil: ['franjas:3','orient:h','iguales','c:naranja','c:blanco','c:verde','c:azul','ncolores:4','pos:arriba=naranja','pos:centro=blanco','pos:abajo=verde','s:rueda','rueda:azul','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y una rueda en el centro.', ['franjas:3','orient:h','s:rueda']),
@@ -796,9 +1041,11 @@
                 H('F', 'Monumentos', 'Tiene un edificio de mármol blanco famosísimo: el Taj Mahal.'),
                 H('F', 'Naturaleza', 'Aquí viven el tigre de Bengala y el pavo real.'),
                 H('F', 'Comida', 'Se come pollo tikka masala con pan naan.'),
-                H('F', 'Comida', 'Las samosas son sus empanadillas de papa y guisantes.')
+                H('F', 'Comida', 'Las samosas son sus empanadillas de papa y guisantes.'),
+                H('F', 'Naturaleza', 'La cordillera del Himalaya atraviesa el norte del país.')
             ]},
             { id: "KOR", iso: "kr", nombre: "Corea del Sur",
+              datos: { capital: 'Seúl', moneda: 'el won', idioma: 'coreano' },
               perfil: ['nofranjas','fondo:blanco','c:blanco','c:rojo','c:azul','c:negro','ncolores:4','s:taegeuk','s:circulo','s:trigramas','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Fondo blanco con un círculo de dos colores en el centro.', ['fondo:blanco','s:circulo','s:taegeuk']),
@@ -808,9 +1055,12 @@
                 H('F', 'Comida', 'Su comida más famosa es el kimchi, col fermentada picante.'),
                 H('F', 'Comida', 'El bibimbap se sirve en un tazón de piedra caliente.'),
                 H('F', 'Monumentos', 'En su capital está el palacio Gyeongbokgung.'),
-                H('F', 'Naturaleza', 'Su animal símbolo es el tigre siberiano.')
+                H('F', 'Naturaleza', 'Su animal símbolo es el tigre siberiano.'),
+                H('F', 'Historia', 'Celebra el Chuseok con banquetes en familia.'),
+                H('F', 'Monumentos', 'En su capital hay una torre con vistas a toda la ciudad: la Torre N de Seúl.')
             ]},
             { id: "THA", iso: "th", nombre: "Tailandia",
+              datos: { capital: 'Bangkok', moneda: 'el baht', idioma: 'tailandés' },
               perfil: ['franjas:5','orient:h','centro-ancha','c:rojo','c:blanco','c:azul','ncolores:3','pos:arriba=rojo','pos:centro=azul','pos:abajo=rojo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene cinco franjas horizontales y la del centro es más ancha.', ['franjas:5','orient:h','centro-ancha']),
@@ -820,9 +1070,12 @@
                 H('F', 'Comida', 'Su plato más famoso es el pad thai, fideos de arroz salteados.'),
                 H('F', 'Naturaleza', 'Los elefantes son muy queridos y respetados aquí.'),
                 H('F', 'Monumentos', 'En su capital está el Gran Palacio.'),
-                H('F', 'Comida', 'El tom yum es su sopa picante de camarones.')
+                H('F', 'Comida', 'El tom yum es su sopa picante de camarones.'),
+                H('F', 'Historia', 'En el festival Songkran la gente se moja con agua unos a otros.'),
+                H('F', 'Monumentos', 'Cerca de su capital hay un mercado flotante famoso: Damnoen Saduak.')
             ]},
             { id: "VNM", iso: "vn", nombre: "Vietnam",
+              datos: { capital: 'Hanói', moneda: 'el dong', idioma: 'vietnamita' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:amarillo','ncolores:2','s:estrella','estrella:amarilla','estrella:centro','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es rojo con una sola estrella.', ['fondo:rojo','s:estrella']),
@@ -832,9 +1085,12 @@
                 H('F', 'Comida', 'Su sopa de fideos más famosa se llama pho.'),
                 H('F', 'Comida', 'El banh mi es su sándwich crujiente.'),
                 H('F', 'Naturaleza', 'El búfalo de agua ayuda en sus campos de arroz.'),
-                H('F', 'Monumentos', 'Tiene una antigua Ciudad Imperial con murallas en Hué.')
+                H('F', 'Monumentos', 'Tiene una antigua Ciudad Imperial con murallas en Hué.'),
+                H('F', 'Naturaleza', 'El río Mekong atraviesa el país.'),
+                H('F', 'Naturaleza', 'Tiene una bahía con islotes de piedra caliza llamada Ha Long.')
             ]},
             { id: "MNG", iso: "mn", nombre: "Mongolia",
+              datos: { capital: 'Ulán Bator', moneda: 'el tugrik', idioma: 'mongol' },
               perfil: ['franjas:3','orient:v','iguales','c:rojo','c:celeste','c:amarillo','ncolores:3','pos:izq=rojo','pos:centro=celeste','pos:der=rojo','s:soyombo','simbolo:dorado','simbolo:mastil'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales y un símbolo dorado junto al mástil.', ['franjas:3','orient:v','simbolo:dorado','simbolo:mastil']),
@@ -843,9 +1099,12 @@
                 H('M', 'Color extra', 'El símbolo dorado se llama Soyombo y tiene fuego, sol y luna.', ['s:soyombo','simbolo:dorado']),
                 H('F', 'Naturaleza', 'Aquí viven caballos salvajes de Przewalski y camellos de dos jorobas.'),
                 H('F', 'Comida', 'Sus empanadillas al vapor se llaman buuz.'),
-                H('F', 'Comida', 'Beben airag, leche de yegua fermentada.')
+                H('F', 'Comida', 'Beben airag, leche de yegua fermentada.'),
+                H('F', 'Naturaleza', 'Solo tiene dos vecinos: China y Rusia.'),
+                H('F', 'Monumentos', 'Sus nómadas viven en yurtas, casas redondas que se pueden mover.')
             ]},
             { id: "LBN", iso: "lb", nombre: "Líbano",
+              datos: { capital: 'Beirut', moneda: 'la libra libanesa', idioma: 'árabe' },
               perfil: ['franjas:3','orient:h','centro-ancha','c:rojo','c:blanco','c:verde','ncolores:3','pos:arriba=rojo','pos:centro=blanco','pos:abajo=rojo','s:arbol','arbol:verde','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y un árbol en el centro.', ['franjas:3','orient:h','s:arbol']),
@@ -854,9 +1113,11 @@
                 H('M', 'Color extra', 'El árbol del centro es un cedro verde.', ['s:arbol','arbol:verde']),
                 H('F', 'Comida', 'Su ensalada de perejil se llama tabbouleh.'),
                 H('F', 'Comida', 'Aquí se come hummus, puré de garbanzos.'),
-                H('F', 'Monumentos', 'Tiene ruinas gigantes de la época romana en Baalbek.')
+                H('F', 'Monumentos', 'Tiene ruinas gigantes de la época romana en Baalbek.'),
+                H('F', 'Comida', 'Su plato típico es el kibbeh, de carne picada y trigo bulgur.')
             ]},
             { id: "IDN", iso: "id", nombre: "Indonesia",
+              datos: { capital: 'Yakarta', moneda: 'la rupia indonesia', idioma: 'indonesio' },
               perfil: ['franjas:2','orient:h','iguales','mitades','c:rojo','c:blanco','ncolores:2','pos:arriba=rojo','pos:abajo=blanco','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene solo dos franjas horizontales iguales.', ['franjas:2','orient:h','iguales']),
@@ -865,9 +1126,12 @@
                 H('M', 'Color extra', 'Su franja de abajo es blanca.', ['pos:abajo=blanco']),
                 H('F', 'Naturaleza', 'Aquí vive el dragón de Komodo, un lagarto gigante.'),
                 H('F', 'Comida', 'Su arroz frito se llama nasi goreng.'),
-                H('F', 'Comida', 'Las brochetas satay se sirven con salsa de cacahuete.')
+                H('F', 'Comida', 'Las brochetas satay se sirven con salsa de cacahuete.'),
+                H('D', 'Bandera', 'No lleva ningún dibujo y solo usa dos colores.', ['s:ninguno','ncolores:2']),
+                H('F', 'Naturaleza', 'Tiene un volcán muy famoso llamado monte Bromo.')
             ]},
             { id: "NPL", iso: "np", nombre: "Nepal",
+              datos: { capital: 'Katmandú', moneda: 'la rupia nepalí', idioma: 'nepalí' },
               perfil: ['forma:triangulos','c:rojo','c:azul','c:blanco','ncolores:3','s:luna','s:sol','sol:blanco','luna:blanca'],
               pistas: [
                 H('D', 'Bandera', 'Es la única bandera del mundo que no es rectangular.', ['forma:triangulos']),
@@ -877,9 +1141,12 @@
                 H('F', 'Naturaleza', 'En sus montañas del Himalaya vive el leopardo de las nieves.'),
                 H('F', 'Comida', 'Sus empanadillas al vapor se llaman momos.'),
                 H('F', 'Naturaleza', 'Tiene rinocerontes de un solo cuerno.'),
-                H('F', 'Comida', 'Su plato diario es el dal bhat: arroz con sopa de lentejas.')
+                H('F', 'Comida', 'Su plato diario es el dal bhat: arroz con sopa de lentejas.'),
+                H('F', 'Naturaleza', 'Tiene el Everest, la montaña más alta del mundo.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional de Chitwan, con animales en peligro de extinción.')
             ]},
             { id: "KHM", iso: "kh", nombre: "Camboya",
+              datos: { capital: 'Nom Pen', moneda: 'el riel', idioma: 'jemer' },
               perfil: ['franjas:3','orient:h','centro-ancha','c:azul','c:rojo','c:blanco','ncolores:3','pos:arriba=azul','pos:centro=rojo','pos:abajo=azul','s:edificio','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y un edificio dibujado en el centro.', ['franjas:3','orient:h','s:edificio']),
@@ -888,9 +1155,12 @@
                 H('M', 'Color extra', 'El edificio blanco del centro tiene tres torres.', ['s:edificio']),
                 H('F', 'Comida', 'Su plato típico es el amok: pescado al vapor con leche de coco en hoja de plátano.'),
                 H('F', 'Naturaleza', 'En sus ríos vive el delfín del Irawadi, de cabeza redonda.'),
-                H('F', 'Monumentos', 'Tiene ruinas antiguas enormes con torres de piedra llamadas Angkor.')
+                H('F', 'Monumentos', 'Tiene ruinas antiguas enormes con torres de piedra llamadas Angkor.'),
+                H('F', 'Naturaleza', 'Su río más largo es el Mekong.'),
+                H('F', 'Naturaleza', 'Tiene un gran lago llamado Tonle Sap.')
             ]},
             { id: "KAZ", iso: "kz", nombre: "Kazajistán",
+              datos: { capital: 'Astaná', moneda: 'el tenge', idioma: 'kazajo' },
               perfil: ['nofranjas','fondo:celeste','c:celeste','c:amarillo','ncolores:2','s:sol','sol:dorado','s:ave','s:aguila','ave:dorada','s:decorativa','simbolo:dorado','simbolo:mastil'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es celeste con un sol y un ave.', ['fondo:celeste','s:sol','s:ave']),
@@ -899,9 +1169,12 @@
                 H('M', 'Color extra', 'El sol, el águila y la franja decorativa son dorados.', ['s:sol','s:aguila','s:decorativa','simbolo:dorado']),
                 H('F', 'Monumentos', 'En su capital hay una torre monumental muy famosa llamada Baiterek.'),
                 H('F', 'Comida', 'Su plato ceremonial es el beshbarmak, láminas de masa con carne.'),
-                H('F', 'Naturaleza', 'En sus montañas vive el leopardo de las nieves.')
+                H('F', 'Naturaleza', 'En sus montañas vive el leopardo de las nieves.'),
+                H('F', 'Historia', 'Celebra el Nauryz, la fiesta de la primavera.'),
+                H('F', 'Naturaleza', 'Tiene un lago de colores cambiantes llamado Kaindy.')
             ]},
             { id: "ARM", iso: "am", nombre: "Armenia",
+              datos: { capital: 'Ereván', moneda: 'el dram', idioma: 'armenio' },
               perfil: ['franjas:3','orient:h','iguales','c:rojo','c:azul','c:naranja','ncolores:3','pos:arriba=rojo','pos:centro=azul','pos:abajo=naranja','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales del mismo tamaño.', ['franjas:3','orient:h','iguales']),
@@ -910,9 +1183,12 @@
                 H('M', 'Color extra', 'Sus franjas son roja, azul y albaricoque.', ['pos:arriba=rojo','pos:centro=azul','pos:abajo=naranja']),
                 H('F', 'Comida', 'Su pan plano se llama lavash y se hornea en un horno tradicional llamado tonir.'),
                 H('F', 'Comida', 'Su asado a la brasa se llama khorovats.'),
-                H('F', 'Naturaleza', 'En sus montañas vive la cabra bezoar, de cuernos enormes.')
+                H('F', 'Naturaleza', 'En sus montañas vive la cabra bezoar, de cuernos enormes.'),
+                H('F', 'Naturaleza', 'El monte Ararat es uno de sus símbolos.'),
+                H('F', 'Naturaleza', 'Su lago más grande es el Sevan.')
             ]},
             { id: "PHL", iso: "ph", nombre: "Filipinas",
+              datos: { capital: 'Manila', moneda: 'el peso filipino', idioma: 'filipino e inglés' },
               perfil: ['franjas:2','orient:h','iguales','c:azul','c:rojo','c:blanco','c:amarillo','ncolores:4','pos:arriba=azul','pos:abajo=rojo','s:triangulo','triangulo:blanco','s:sol','sol:dorado','s:estrellas','estrellas:amarillas'],
               pistas: [
                 H('D', 'Bandera', 'Tiene dos franjas horizontales y un triángulo blanco junto al mástil.', ['franjas:2','orient:h','s:triangulo','triangulo:blanco']),
@@ -922,11 +1198,86 @@
                 H('F', 'Monumentos', 'Tiene terrazas de arroz en escalera en las montañas de Banaue.'),
                 H('F', 'Naturaleza', 'Aquí vive el tarsero, un animalito de ojos enormes.'),
                 H('F', 'Comida', 'Su plato típico es el adobo: carne cocinada en vinagre y salsa de soja.'),
-                H('F', 'Comida', 'En las fiestas asan un lechón entero.')
-            ]}
+                H('F', 'Comida', 'En las fiestas asan un lechón entero.'),
+                H('F', 'Naturaleza', 'Su playa de arena blanca más famosa es Boracay.'),
+                H('F', 'Naturaleza', 'Su isla más grande es Luzón.')
+            ]},
+            { id: "TUR", iso: "tr", nombre: "Turquía",
+              datos: { capital: 'Ankara', moneda: 'la lira turca', idioma: 'turco' },
+              perfil: ['nofranjas','fondo:rojo','c:rojo','c:blanco','ncolores:2','s:luna','luna:blanca','s:estrella','estrella:blanca','simbolo:mastil'],
+              pistas: [
+                H('D', 'Bandera', 'Su fondo es rojo y tiene una luna y una estrella.', ['fondo:rojo','s:luna','s:estrella']),
+                H('D', 'Bandera', 'Su luna y su estrella son blancas.', ['luna:blanca','estrella:blanca']),
+                H('M', 'Color extra', 'Fondo rojo con una luna blanca grande y una estrella blanca a su lado.', ['fondo:rojo','luna:blanca','estrella:blanca']),
+                H('M', 'Color extra', 'Solo usa dos colores: rojo de fondo y blanco para la luna y la estrella.', ['c:rojo','c:blanco','ncolores:2','luna:blanca']),
+                H('F', 'Monumentos', 'Su ciudad más famosa, Estambul, antes se llamaba Bizancio.'),
+                H('F', 'Comida', 'Su plato más conocido es el döner kebab, con capas de carne.'),
+                H('F', 'Naturaleza', 'Su cordillera principal son los montes Tauro.')
+              ]},
+            { id: "MYS", iso: "my", nombre: "Malasia",
+              datos: { capital: 'Kuala Lumpur', moneda: 'el ringgit', idioma: 'malayo' },
+              perfil: ['franjas:14','orient:h','c:rojo','c:blanco','c:azul','c:amarillo','ncolores:4','franjas-colores:2','s:canton','canton:azul','s:luna','luna:amarilla','s:estrella','estrella:amarilla','estrella:14puntas'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene muchas franjas horizontales y un rectángulo azul en la esquina.', ['franjas:14','orient:h','s:canton','canton:azul']),
+                H('D', 'Bandera', 'En su rectángulo azul hay una luna y una estrella amarillas.', ['canton:azul','s:luna','luna:amarilla','estrella:amarilla']),
+                H('M', 'Color extra', 'Catorce franjas rojas y blancas con un rectángulo azul que lleva una luna y una estrella amarillas.', ['franjas:14','c:rojo','c:blanco','canton:azul','luna:amarilla','estrella:amarilla']),
+                H('M', 'Color extra', 'Su estrella amarilla tiene catorce puntas.', ['estrella:amarilla','estrella:14puntas']),
+                H('F', 'Comida', 'Su plato típico es el nasi lemak, arroz con leche de coco.'),
+                H('F', 'Monumentos', 'En su capital están las Torres Petronas, dos torres gemelas.'),
+                H('F', 'Naturaleza', 'Su río principal se llama Klang.')
+              ]},
+            { id: "SGP", iso: "sg", nombre: "Singapur",
+              datos: { capital: 'Singapur', moneda: 'el dólar de Singapur', idioma: 'inglés, malayo, mandarín y tamil' },
+              perfil: ['franjas:2','orient:h','iguales','mitades','c:rojo','c:blanco','ncolores:2','pos:arriba=rojo','pos:abajo=blanco','s:luna','luna:blanca','s:estrellas','estrellas:blancas','estrellas:5','estrellas:circulo','simbolo:mastil'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene dos franjas horizontales y una luna con estrellas en la de arriba.', ['franjas:2','orient:h','s:luna','s:estrellas']),
+                H('D', 'Bandera', 'Sus cinco estrellas blancas forman un círculo junto a una luna.', ['estrellas:5','estrellas:blancas','estrellas:circulo','s:luna']),
+                H('M', 'Color extra', 'Mitad roja arriba y mitad blanca abajo; en la roja, una luna blanca y cinco estrellas blancas en círculo.', ['pos:arriba=rojo','pos:abajo=blanco','luna:blanca','estrellas:5']),
+                H('M', 'Color extra', 'La luna y las cinco estrellas están en la franja roja, junto al mástil.', ['pos:arriba=rojo','luna:blanca','simbolo:mastil']),
+                H('F', 'Monumentos', 'Tiene un parque futurista con árboles gigantes de metal llamado Gardens by the Bay.'),
+                H('F', 'Historia', 'Cada año celebra el desfile de Chingay por el Año Nuevo Chino.'),
+                H('F', 'Monumentos', 'La isla de Sentosa es su zona de diversión y turismo.')
+              ]},
+            { id: "LKA", iso: "lk", nombre: "Sri Lanka",
+              datos: { capital: 'Colombo', moneda: 'la rupia de Sri Lanka', idioma: 'cingalés y tamil' },
+              perfil: ['s:borde','borde:amarillo','c:amarillo','c:verde','c:naranja','c:rojo','ncolores:4','franjas:2','orient:v','pos:izq=verde','fondo:rojo','s:leon','leon:dorado','s:hojas'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene un león dorado sobre fondo rojo oscuro.', ['s:leon','leon:dorado','fondo:rojo']),
+                H('D', 'Bandera', 'Toda la bandera tiene un borde amarillo.', ['s:borde','borde:amarillo']),
+                H('M', 'Color extra', 'Borde amarillo; a la izquierda dos franjas verticales verde y naranja, y a la derecha un león dorado sobre rojo oscuro.', ['borde:amarillo','pos:izq=verde','c:naranja','leon:dorado']),
+                H('M', 'Color extra', 'En las esquinas del fondo rojo hay cuatro hojas doradas.', ['fondo:rojo','s:hojas','leon:dorado']),
+                H('F', 'Monumentos', 'Tiene una antigua ciudad en ruinas llamada Anuradhapura.'),
+                H('F', 'Monumentos', 'Tiene una roca gigante llamada Sigiriya con construcciones antiguas en la cima.'),
+                H('F', 'Historia', 'Celebra el Año Nuevo cingalés y tamil.')
+              ]},
+            { id: "BGD", iso: "bd", nombre: "Bangladesh",
+              datos: { capital: 'Daca', moneda: 'el taka', idioma: 'bengalí' },
+              perfil: ['nofranjas','fondo:verde','c:verde','c:rojo','ncolores:2','s:circulo','circulo:rojo','circulo:descentrado'],
+              pistas: [
+                H('D', 'Bandera', 'Su fondo es verde con un solo círculo.', ['fondo:verde','s:circulo']),
+                H('D', 'Bandera', 'Su círculo es rojo y está un poco corrido hacia el mástil.', ['circulo:rojo','circulo:descentrado']),
+                H('M', 'Color extra', 'Fondo verde oscuro con un gran círculo rojo un poco hacia el mástil.', ['fondo:verde','circulo:rojo','circulo:descentrado']),
+                H('M', 'Color extra', 'Solo usa dos colores: verde y rojo.', ['c:verde','c:rojo','ncolores:2']),
+                H('F', 'Naturaleza', 'El río Ganges es su río más importante.'),
+                H('F', 'Historia', 'Su deporte más popular es el críquet.'),
+                H('F', 'Comida', 'Su fruta nacional es la yaca.')
+              ]},
+            { id: "BTN", iso: "bt", nombre: "Bután",
+              datos: { capital: 'Timbu', moneda: 'el ngultrum', idioma: 'dzongkha' },
+              perfil: ['nofranjas','orient:diag','mitades','c:amarillo','c:naranja','c:blanco','ncolores:3','s:dragon','dragon:blanco','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene un dragón que cruza la bandera en diagonal.', ['s:dragon','orient:diag']),
+                H('D', 'Bandera', 'Está dividida en diagonal en dos mitades: amarilla y naranja.', ['orient:diag','mitades','c:amarillo','c:naranja']),
+                H('M', 'Color extra', 'Mitad amarilla arriba y mitad naranja abajo, divididas en diagonal, con un dragón blanco en medio.', ['c:amarillo','c:naranja','dragon:blanco','orient:diag']),
+                H('M', 'Color extra', 'Su dragón es blanco y sostiene joyas en las garras.', ['s:dragon','dragon:blanco']),
+                H('F', 'Naturaleza', 'La cordillera del Himalaya atraviesa el país.'),
+                H('F', 'Historia', 'Mide la Felicidad Nacional Bruta: qué tan felices están sus habitantes.'),
+                H('F', 'Naturaleza', 'Uno de sus ríos principales se llama Wang Chhu.')
+              ]}
         ],
         "Europa": [
             { id: "ESP", iso: "es", nombre: "España",
+              datos: { capital: 'Madrid', moneda: 'el euro', idioma: 'español' },
               perfil: ['franjas:3','orient:h','centro-ancha','c:rojo','c:amarillo','ncolores:2','franjas-colores:2','pos:arriba=rojo','pos:centro=amarillo','pos:abajo=rojo','s:escudo','s:escudo-estatal'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales y la del centro es el doble de ancha.', ['franjas:3','orient:h','centro-ancha']),
@@ -936,9 +1287,11 @@
                 H('F', 'Comida', 'Aquí nació la paella, un plato de arroz con azafrán.'),
                 H('F', 'Naturaleza', 'Su felino más especial es el lince ibérico.'),
                 H('F', 'Monumentos', 'Tiene un palacio antiguo con patios, jardines y fuentes: la Alhambra de Granada.'),
-                H('F', 'Comida', 'Se come tortilla de patatas y jamón ibérico.')
+                H('F', 'Comida', 'Se come tortilla de patatas y jamón ibérico.'),
+                H('F', 'Historia', 'Su baile más famoso es el flamenco.')
             ]},
             { id: "PRT", iso: "pt", nombre: "Portugal",
+              datos: { capital: 'Lisboa', moneda: 'el euro', idioma: 'portugués' },
               perfil: ['franjas:2','orient:v','desigual','c:verde','c:rojo','c:amarillo','ncolores:3','pos:izq=verde','pos:der=rojo','s:esfera','s:escudo','simbolo:dorado'],
               pistas: [
                 H('D', 'Bandera', 'Está dividida en dos partes verticales de distinto ancho.', ['franjas:2','orient:v','desigual']),
@@ -948,9 +1301,12 @@
                 H('F', 'Comida', 'Sus pastelitos de crema más famosos son los pastéis de nata.'),
                 H('F', 'Monumentos', 'Tiene una torre junto al río llamada Torre de Belém.'),
                 H('F', 'Comida', 'Se come mucho bacalao y sardinas asadas.'),
-                H('F', 'Naturaleza', 'Un gallo de colores llamado gallo de Barcelos es su símbolo popular.')
+                H('F', 'Naturaleza', 'Un gallo de colores llamado gallo de Barcelos es su símbolo popular.'),
+                H('F', 'Historia', 'El explorador Vasco da Gama zarpó desde ahí y llegó navegando hasta la India.'),
+                H('F', 'Naturaleza', 'Tiene un archipiélago de islas volcánicas llamado Azores.')
             ]},
             { id: "FRA", iso: "fr", nombre: "Francia",
+              datos: { capital: 'París', moneda: 'el euro', idioma: 'francés' },
               perfil: ['franjas:3','orient:v','iguales','c:azul','c:blanco','c:rojo','ncolores:3','pos:izq=azul','pos:centro=blanco','pos:der=rojo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales del mismo tamaño.', ['franjas:3','orient:v','iguales']),
@@ -963,6 +1319,7 @@
                 H('F', 'Naturaleza', 'Su animal símbolo es el gallo.')
             ]},
             { id: "DEU", iso: "de", nombre: "Alemania",
+              datos: { capital: 'Berlín', moneda: 'el euro', idioma: 'alemán' },
               perfil: ['franjas:3','orient:h','iguales','c:negro','c:rojo','c:amarillo','ncolores:3','pos:arriba=negro','pos:centro=rojo','pos:abajo=amarillo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales del mismo tamaño.', ['franjas:3','orient:h','iguales']),
@@ -972,9 +1329,11 @@
                 H('F', 'Comida', 'Es famoso por sus salchichas bratwurst y los pretzels.'),
                 H('F', 'Monumentos', 'Tiene un castillo de cuento llamado Neuschwanstein.'),
                 H('F', 'Monumentos', 'En su capital hay una gran puerta de piedra: la Puerta de Brandeburgo.'),
-                H('F', 'Naturaleza', 'En sus bosques viven jabalíes.')
+                H('F', 'Naturaleza', 'En sus bosques viven jabalíes.'),
+                H('F', 'Naturaleza', 'Tiene un bosque enorme llamado Selva Negra.')
             ]},
             { id: "ITA", iso: "it", nombre: "Italia",
+              datos: { capital: 'Roma', moneda: 'el euro', idioma: 'italiano' },
               perfil: ['franjas:3','orient:v','iguales','c:verde','c:blanco','c:rojo','ncolores:3','pos:izq=verde','pos:centro=blanco','pos:der=rojo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales del mismo tamaño.', ['franjas:3','orient:v','iguales']),
@@ -984,9 +1343,12 @@
                 H('F', 'Comida', 'Aquí nacieron la pizza y la pasta.'),
                 H('F', 'Monumentos', 'Tiene una torre famosa que está inclinada, en Pisa.'),
                 H('F', 'Monumentos', 'En su capital hay una construcción enorme de piedra llamada Coliseo.'),
-                H('F', 'Comida', 'Su postre más famoso es el tiramisú.')
+                H('F', 'Comida', 'Su postre más famoso es el tiramisú.'),
+                H('F', 'Historia', 'El Carnaval de Venecia es famoso por sus máscaras.'),
+                H('F', 'Naturaleza', 'Tiene un volcán activo llamado Vesubio.')
             ]},
             { id: "GBR", iso: "gb", nombre: "Reino Unido",
+              datos: { capital: 'Londres', moneda: 'la libra esterlina', idioma: 'inglés, galés, irlandés y escocés' },
               perfil: ['nofranjas','fondo:azul','c:azul','c:rojo','c:blanco','ncolores:3','s:cruz','s:cruces','cruz:roja','cruz:diagonal','s:unionjack'],
               pistas: [
                 H('D', 'Bandera', 'Tiene fondo azul con varias cruces superpuestas.', ['fondo:azul','s:cruces']),
@@ -996,9 +1358,11 @@
                 H('F', 'Monumentos', 'Tiene un famoso reloj de torre llamado Big Ben.'),
                 H('F', 'Comida', 'Su plato típico es el fish and chips: pescado frito con papas.'),
                 H('F', 'Monumentos', 'Tiene un círculo de piedras gigantes de hace miles de años: Stonehenge.'),
-                H('F', 'Comida', 'Toman té con scones, unos panecillos dulces.')
+                H('F', 'Comida', 'Toman té con scones, unos panecillos dulces.'),
+                H('F', 'Naturaleza', 'El río Támesis atraviesa su capital.')
             ]},
             { id: "CHE", iso: "ch", nombre: "Suiza",
+              datos: { capital: 'Berna', moneda: 'el franco suizo', idioma: 'alemán, francés, italiano y romanche' },
               perfil: ['forma:cuadrada','nofranjas','fondo:rojo','c:rojo','c:blanco','ncolores:2','s:cruz','cruz:blanca','cruz:centrada','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Es cuadrada, no rectangular.', ['forma:cuadrada']),
@@ -1008,9 +1372,11 @@
                 H('F', 'Comida', 'Es famoso por la fondue: queso derretido para mojar pan.'),
                 H('F', 'Monumentos', 'Tiene una montaña en forma de pirámide llamada Matterhorn (Cervino).'),
                 H('F', 'Naturaleza', 'En sus Alpes viven íbices y marmotas.'),
-                H('F', 'Monumentos', 'Tiene un puente de madera cubierto muy antiguo en Lucerna.')
+                H('F', 'Monumentos', 'Tiene un puente de madera cubierto muy antiguo en Lucerna.'),
+                H('F', 'Historia', 'Es famoso en todo el mundo por sus relojes.')
             ]},
             { id: "NLD", iso: "nl", nombre: "Países Bajos",
+              datos: { capital: 'Ámsterdam', moneda: 'el euro', idioma: 'holandés, inglés, papiamento y frisón occidental' },
               perfil: ['franjas:3','orient:h','iguales','c:rojo','c:blanco','c:azul','ncolores:3','pos:arriba=rojo','pos:centro=blanco','pos:abajo=azul','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas horizontales del mismo tamaño.', ['franjas:3','orient:h','iguales']),
@@ -1020,9 +1386,11 @@
                 H('F', 'Monumentos', 'Es famoso por sus molinos de viento, como los de Kinderdijk.'),
                 H('F', 'Comida', 'Sus galletas de gofre con caramelo se llaman stroopwafel.'),
                 H('F', 'Comida', 'Comen arenque crudo con cebolla y pepinillo.'),
-                H('F', 'Naturaleza', 'Su ave típica es la espátula, que tiene el pico plano como una cuchara.')
+                H('F', 'Naturaleza', 'Su ave típica es la espátula, que tiene el pico plano como una cuchara.'),
+                H('F', 'Historia', 'El pintor Vincent van Gogh nació ahí.')
             ]},
             { id: "POL", iso: "pl", nombre: "Polonia",
+              datos: { capital: 'Varsovia', moneda: 'el zloty', idioma: 'polaco' },
               perfil: ['franjas:2','orient:h','iguales','mitades','c:blanco','c:rojo','ncolores:2','pos:arriba=blanco','pos:abajo=rojo','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene solo dos franjas horizontales iguales.', ['franjas:2','orient:h','iguales']),
@@ -1032,9 +1400,11 @@
                 H('F', 'Comida', 'Sus empanadillas rellenas de papa y queso se llaman pierogi.'),
                 H('F', 'Naturaleza', 'En su bosque de Białowieża vive el bisonte europeo.'),
                 H('F', 'Monumentos', 'Tiene un castillo de ladrillo enorme llamado Malbork.'),
-                H('F', 'Monumentos', 'En Cracovia está el Castillo Real de Wawel.')
+                H('F', 'Monumentos', 'En Cracovia está el Castillo Real de Wawel.'),
+                H('F', 'Historia', 'El compositor Frédéric Chopin nació ahí.')
             ]},
             { id: "ISL", iso: "is", nombre: "Islandia",
+              datos: { capital: 'Reikiavik', moneda: 'la corona islandesa', idioma: 'islandés' },
               perfil: ['nofranjas','fondo:azul','c:azul','c:rojo','c:blanco','ncolores:3','s:cruz','cruz:roja','cruz:descentrada','cruz:bordes-blancos'],
               pistas: [
                 H('D', 'Bandera', 'Tiene fondo azul con una cruz que no está centrada.', ['fondo:azul','s:cruz','cruz:descentrada']),
@@ -1044,9 +1414,11 @@
                 H('F', 'Naturaleza', 'En sus costas viven los frailecillos, aves de pico colorido.'),
                 H('F', 'Monumentos', 'Tiene una cascada enorme llamada Gullfoss.'),
                 H('F', 'Comida', 'Comen skyr, un lácteo parecido al yogur.'),
-                H('F', 'Naturaleza', 'Sus caballos son pequeños y tienen una forma especial de trotar.')
+                H('F', 'Naturaleza', 'Sus caballos son pequeños y tienen una forma especial de trotar.'),
+                H('F', 'Naturaleza', 'Tiene aguas termales famosas llamadas Laguna Azul.')
             ]},
             { id: "GRC", iso: "gr", nombre: "Grecia",
+              datos: { capital: 'Atenas', moneda: 'el euro', idioma: 'griego' },
               perfil: ['franjas:9','orient:h','c:azul','c:blanco','ncolores:2','franjas-colores:2','s:canton','canton:azul','s:cruz','cruz:blanca'],
               pistas: [
                 H('D', 'Bandera', 'Tiene nueve franjas horizontales y un cuadrado en la esquina.', ['franjas:9','orient:h','s:canton']),
@@ -1059,6 +1431,7 @@
                 H('F', 'Naturaleza', 'En sus islas vive la foca monje del Mediterráneo.')
             ]},
             { id: "NOR", iso: "no", nombre: "Noruega",
+              datos: { capital: 'Oslo', moneda: 'la corona noruega', idioma: 'noruego y sami' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:azul','c:blanco','ncolores:3','s:cruz','cruz:azul','cruz:descentrada','cruz:bordes-blancos'],
               pistas: [
                 H('D', 'Bandera', 'Tiene fondo rojo con una cruz que no está en el centro.', ['fondo:rojo','s:cruz','cruz:descentrada']),
@@ -1068,9 +1441,11 @@
                 H('F', 'Naturaleza', 'Tiene fiordos: valles de mar entre montañas, como el de Geiranger.'),
                 H('F', 'Naturaleza', 'En sus bosques vive el alce.'),
                 H('F', 'Comida', 'Es famoso por su salmón.'),
-                H('F', 'Comida', 'Sus albóndigas se llaman kjøttkaker.')
+                H('F', 'Comida', 'Sus albóndigas se llaman kjøttkaker.'),
+                H('F', 'Naturaleza', 'En Tromsø, al norte, se ven las auroras boreales.')
             ]},
             { id: "IRL", iso: "ie", nombre: "Irlanda",
+              datos: { capital: 'Dublín', moneda: 'el euro', idioma: 'inglés e irlandés' },
               perfil: ['franjas:3','orient:v','iguales','c:verde','c:blanco','c:naranja','ncolores:3','pos:izq=verde','pos:centro=blanco','pos:der=naranja','s:ninguno'],
               pistas: [
                 H('D', 'Bandera', 'Tiene tres franjas verticales del mismo tamaño.', ['franjas:3','orient:v','iguales']),
@@ -1083,6 +1458,7 @@
                 H('F', 'Comida', 'Hornean un pan llamado soda bread.')
             ]},
             { id: "SMR", iso: "sm", nombre: "San Marino",
+              datos: { capital: 'Ciudad de San Marino', moneda: 'el euro', idioma: 'italiano' },
               perfil: ['franjas:2','orient:h','iguales','mitades','c:blanco','c:celeste','ncolores:2','pos:arriba=blanco','pos:abajo=celeste','s:escudo','escudo:centro','centro:dibujo'],
               pistas: [
                 H('D', 'Bandera', 'Tiene dos franjas horizontales iguales.', ['franjas:2','orient:h','iguales']),
@@ -1092,10 +1468,84 @@
                 H('F', 'Monumentos', 'Es famoso por sus tres torres sobre el monte Titano.'),
                 H('F', 'Comida', 'Su pastel típico es la Torta Tre Monti, con cacao y avellanas.'),
                 H('F', 'Naturaleza', 'Su ave símbolo es el halcón peregrino.')
-            ]}
+            ]},
+            { id: "SWE", iso: "se", nombre: "Suecia",
+              datos: { capital: 'Estocolmo', moneda: 'la corona sueca', idioma: 'sueco' },
+              perfil: ['nofranjas','fondo:azul','c:azul','c:amarillo','ncolores:2','s:cruz','cruz:amarilla','cruz:descentrada'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene fondo azul con una cruz amarilla.', ['fondo:azul','s:cruz','cruz:amarilla']),
+                H('D', 'Bandera', 'Solo usa dos colores: azul y amarillo.', ['c:azul','c:amarillo','ncolores:2']),
+                H('M', 'Color extra', 'Fondo azul con una cruz amarilla corrida hacia el mástil.', ['fondo:azul','cruz:amarilla','cruz:descentrada']),
+                H('M', 'Color extra', 'Su cruz amarilla no está centrada: el brazo del lado del mástil es más corto.', ['cruz:amarilla','cruz:descentrada']),
+                H('F', 'Historia', 'Celebra con un gran festival el solsticio de verano.'),
+                H('F', 'Monumentos', 'En el Ayuntamiento de su capital se celebra la fiesta del Premio Nobel.'),
+                H('F', 'Historia', 'La empresa de muebles IKEA nació ahí.')
+              ]},
+            { id: "DNK", iso: "dk", nombre: "Dinamarca",
+              datos: { capital: 'Copenhague', moneda: 'la corona danesa', idioma: 'danés' },
+              perfil: ['nofranjas','fondo:rojo','c:rojo','c:blanco','ncolores:2','s:cruz','cruz:blanca','cruz:descentrada'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene fondo rojo con una cruz blanca que no está centrada.', ['fondo:rojo','cruz:blanca','cruz:descentrada']),
+                H('D', 'Bandera', 'Es rectangular, solo usa rojo y blanco, y su cruz está corrida hacia el mástil.', ['c:rojo','c:blanco','ncolores:2','cruz:descentrada']),
+                H('M', 'Color extra', 'Fondo rojo con una cruz blanca corrida hacia el mástil.', ['fondo:rojo','cruz:blanca','cruz:descentrada']),
+                H('M', 'Color extra', 'Su cruz blanca no tiene bordes de otro color.', ['cruz:blanca','ncolores:2']),
+                H('F', 'Monumentos', 'En su capital hay una estatua de La Sirenita, personaje de cuento.'),
+                H('F', 'Monumentos', 'Tiene uno de los parques de atracciones más antiguos del mundo: los Jardines de Tivoli.'),
+                H('F', 'Naturaleza', 'La isla de Bornholm es famosa por su belleza natural.')
+              ]},
+            { id: "FIN", iso: "fi", nombre: "Finlandia",
+              datos: { capital: 'Helsinki', moneda: 'el euro', idioma: 'finlandés y sueco' },
+              perfil: ['nofranjas','fondo:blanco','c:blanco','c:azul','ncolores:2','s:cruz','cruz:azul','cruz:descentrada'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene fondo blanco con una cruz azul.', ['fondo:blanco','s:cruz','cruz:azul']),
+                H('D', 'Bandera', 'Solo usa dos colores: blanco y azul.', ['c:blanco','c:azul','ncolores:2']),
+                H('M', 'Color extra', 'Fondo blanco con una cruz azul corrida hacia el mástil.', ['fondo:blanco','cruz:azul','cruz:descentrada']),
+                H('M', 'Color extra', 'Su cruz azul no tiene bordes de otro color.', ['cruz:azul','ncolores:2']),
+                H('F', 'Naturaleza', 'Su gran lago del centro del país se llama Saimaa.'),
+                H('F', 'Historia', 'La sauna es una de sus tradiciones más importantes.'),
+                H('F', 'Naturaleza', 'Su región del norte se llama Laponia.')
+              ]},
+            { id: "AUT", iso: "at", nombre: "Austria",
+              datos: { capital: 'Viena', moneda: 'el euro', idioma: 'alemán' },
+              perfil: ['franjas:3','orient:h','iguales','c:rojo','c:blanco','ncolores:2','franjas-colores:2','pos:arriba=rojo','pos:centro=blanco','pos:abajo=rojo','s:ninguno'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas horizontales iguales y solo dos colores.', ['franjas:3','orient:h','iguales','ncolores:2']),
+                H('D', 'Bandera', 'Sus franjas de arriba y abajo son rojas.', ['pos:arriba=rojo','pos:abajo=rojo','orient:h']),
+                H('M', 'Color extra', 'Tres franjas horizontales: roja, blanca y roja, sin ningún dibujo.', ['pos:arriba=rojo','pos:centro=blanco','pos:abajo=rojo','s:ninguno']),
+                H('M', 'Color extra', 'La franja del centro es blanca y no lleva escudo.', ['pos:centro=blanco','s:ninguno']),
+                H('F', 'Naturaleza', 'Los Alpes atraviesan el país.'),
+                H('F', 'Naturaleza', 'Su río más famoso es el Danubio.'),
+                H('F', 'Historia', 'El compositor Mozart nació en su ciudad de Salzburgo.'),
+                H('F', 'Comida', 'Su plato nacional es el Wiener Schnitzel, un filete empanizado.')
+              ]},
+            { id: "BEL", iso: "be", nombre: "Bélgica",
+              datos: { capital: 'Bruselas', moneda: 'el euro', idioma: 'holandés, francés y alemán' },
+              perfil: ['franjas:3','orient:v','iguales','c:negro','c:amarillo','c:rojo','ncolores:3','pos:izq=negro','pos:centro=amarillo','pos:der=rojo','s:ninguno'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas verticales y la primera es negra.', ['franjas:3','orient:v','pos:izq=negro']),
+                H('D', 'Bandera', 'Usa los mismos colores que Alemania, pero en franjas verticales.', ['c:negro','c:amarillo','c:rojo','orient:v']),
+                H('M', 'Color extra', 'Tres franjas verticales: negra, amarilla y roja, sin ningún dibujo.', ['pos:izq=negro','pos:centro=amarillo','pos:der=rojo','s:ninguno']),
+                H('M', 'Color extra', 'La franja del centro es amarilla y la última es roja.', ['pos:centro=amarillo','pos:der=rojo']),
+                H('F', 'Comida', 'Es famosa en todo el mundo por su chocolate.'),
+                H('F', 'Naturaleza', 'Su río más largo es el Mosa.'),
+                H('F', 'Historia', 'Cada dos años, en su capital, hacen una alfombra gigante de flores.')
+              ]},
+            { id: "HRV", iso: "hr", nombre: "Croacia",
+              datos: { capital: 'Zagreb', moneda: 'el euro', idioma: 'croata' },
+              perfil: ['franjas:3','orient:h','iguales','c:rojo','c:blanco','c:azul','ncolores:3','pos:arriba=rojo','pos:centro=blanco','pos:abajo=azul','s:escudo','escudo:centro','escudo:cuadros','centro:dibujo'],
+              pistas: [
+                H('D', 'Bandera', 'Tiene tres franjas horizontales iguales y un escudo en el centro.', ['franjas:3','orient:h','iguales','s:escudo']),
+                H('D', 'Bandera', 'Su escudo es de cuadros rojos y blancos, como un tablero.', ['s:escudo','escudo:cuadros']),
+                H('M', 'Color extra', 'Franjas roja, blanca y azul con un escudo de cuadros rojos y blancos en el centro.', ['pos:arriba=rojo','pos:centro=blanco','pos:abajo=azul','escudo:cuadros']),
+                H('M', 'Color extra', 'Encima del escudo de cuadros hay una corona hecha de cinco escudos pequeños.', ['s:escudo','escudo:cuadros']),
+                H('F', 'Monumentos', 'La ciudad de Dubrovnik está junto al mar Adriático.'),
+                H('F', 'Naturaleza', 'Tiene el Parque Nacional de los Lagos de Plitvice, con cascadas y lagos.'),
+                H('F', 'Naturaleza', 'Los Alpes Dináricos cruzan el país.')
+              ]}
         ],
         "Oceania": [
             { id: "AUS", iso: "au", nombre: "Australia",
+              datos: { capital: 'Canberra', moneda: 'el dólar australiano', idioma: 'inglés' },
               perfil: ['nofranjas','fondo:azul','c:azul','c:blanco','c:rojo','ncolores:3','s:unionjack','s:canton','s:estrellas','estrellas:blancas','estrellas:6'],
               pistas: [
                 H('D', 'Bandera', 'Fondo azul con estrellas blancas y una bandera pequeña en la esquina.', ['fondo:azul','s:estrellas','estrellas:blancas','s:unionjack']),
@@ -1105,9 +1555,13 @@
                 H('F', 'Naturaleza', 'Aquí viven canguros, koalas y ornitorrincos.'),
                 H('F', 'Monumentos', 'Tiene un edificio muy famoso junto al mar con techos curvos: la Ópera de Sídney.'),
                 H('F', 'Monumentos', 'Tiene una roca gigante de color rojizo en medio del desierto llamada Uluru.'),
-                H('F', 'Comida', 'Su pastel típico es el lamington, con coco y chocolate.')
+                H('F', 'Comida', 'Su pastel típico es el lamington, con coco y chocolate.'),
+                H('F', 'Monumentos', 'Su ciudad más grande es Sídney.'),
+                H('F', 'Naturaleza', 'Frente a su costa está la Gran Barrera de Coral.'),
+                H('F', 'Naturaleza', 'Su montaña más alta es el Kosciuszko.')
             ]},
             { id: "NZL", iso: "nz", nombre: "Nueva Zelanda",
+              datos: { capital: 'Wellington', moneda: 'el dólar neozelandés', idioma: 'inglés y maorí' },
               perfil: ['nofranjas','fondo:azul','c:azul','c:rojo','c:blanco','ncolores:3','s:unionjack','s:canton','s:estrellas','estrellas:rojas','estrellas:4'],
               pistas: [
                 H('D', 'Bandera', 'Fondo azul con cuatro estrellas y una bandera pequeña en la esquina.', ['fondo:azul','s:estrellas','estrellas:4','s:unionjack']),
@@ -1117,9 +1571,13 @@
                 H('F', 'Naturaleza', 'Aquí vive el kiwi, un ave que no vuela.'),
                 H('F', 'Monumentos', 'Tiene una torre altísima llamada Sky Tower.'),
                 H('F', 'Naturaleza', 'Tiene un fiordo espectacular llamado Milford Sound.'),
-                H('F', 'Comida', 'Su postre famoso es la pavlova, un merengue con fruta.')
+                H('F', 'Comida', 'Su postre famoso es la pavlova, un merengue con fruta.'),
+                H('F', 'Historia', 'Su equipo de rugby se llama All Blacks.'),
+                H('F', 'Naturaleza', 'Rotorua es famosa por sus aguas termales.'),
+                H('F', 'Historia', 'Celebra el Matariki, una fiesta de la cultura maorí.')
             ]},
             { id: "PNG", iso: "pg", nombre: "Papúa Nueva Guinea",
+              datos: { capital: 'Puerto Moresby', moneda: 'la kina', idioma: 'inglés, tok pisin y hiri motu' },
               perfil: ['orient:diag','s:triangulo','triangulo:rojo','triangulo:negro','c:rojo','c:negro','c:amarillo','c:blanco','ncolores:4','s:ave','ave:dorada','s:estrellas','estrellas:blancas','estrellas:5'],
               pistas: [
                 H('D', 'Bandera', 'Está dividida en diagonal en dos triángulos.', ['orient:diag','s:triangulo']),
@@ -1128,9 +1586,12 @@
                 H('M', 'Color extra', 'En el rojo hay un ave dorada volando; en el negro, cinco estrellas blancas.', ['s:ave','ave:dorada','s:estrellas','estrellas:blancas','triangulo:rojo','triangulo:negro']),
                 H('F', 'Naturaleza', 'Su ave más famosa es el ave del paraíso, de plumas larguísimas.'),
                 H('F', 'Naturaleza', 'También vive aquí el casuario, un ave muy grande que no vuela.'),
-                H('F', 'Comida', 'Su banquete tradicional, el mumu, se cocina sobre piedras calientes.')
+                H('F', 'Comida', 'Su banquete tradicional, el mumu, se cocina sobre piedras calientes.'),
+                H('F', 'Historia', 'Sus tribus celebran el sing-sing, con danzas y trajes tradicionales.'),
+                H('F', 'Historia', 'Celebra el Mt. Hagen Show, con trajes tradicionales.')
             ]},
             { id: "FJI", iso: "fj", nombre: "Fiyi",
+              datos: { capital: 'Suva', moneda: 'el dólar fiyiano', idioma: 'inglés, fiyiano e hindi fiyiano' },
               perfil: ['nofranjas','fondo:celeste','c:celeste','c:azul','c:rojo','c:blanco','ncolores:4','s:unionjack','s:canton','s:escudo'],
               pistas: [
                 H('D', 'Bandera', 'Su fondo es celeste, más claro que el de sus vecinos.', ['fondo:celeste']),
@@ -1139,9 +1600,12 @@
                 H('M', 'Color extra', 'Su escudo tiene una palmera, caña de azúcar y una paloma.', ['s:escudo']),
                 H('F', 'Naturaleza', 'Tiene una iguana verde con crestas que es única de sus islas.'),
                 H('F', 'Comida', 'Su plato típico es el kokoda: pescado marinado en limón con leche de coco.'),
-                H('F', 'Naturaleza', 'Sus islas están rodeadas de hermosos arrecifes de coral.')
+                H('F', 'Naturaleza', 'Sus islas están rodeadas de hermosos arrecifes de coral.'),
+                H('F', 'Naturaleza', 'Su isla más grande es Viti Levu.'),
+                H('F', 'Comida', 'Su bebida tradicional se llama kava.')
             ]},
             { id: "WSM", iso: "ws", nombre: "Samoa",
+              datos: { capital: 'Apia', moneda: 'el tala', idioma: 'samoano e inglés' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:azul','c:blanco','ncolores:3','s:canton','canton:azul','s:estrellas','estrellas:blancas','estrellas:5'],
               pistas: [
                 H('D', 'Bandera', 'Fondo rojo con un rectángulo azul en la esquina.', ['fondo:rojo','s:canton','canton:azul']),
@@ -1150,9 +1614,13 @@
                 H('M', 'Color extra', 'Las cinco estrellas blancas son de distintos tamaños y forman la Cruz del Sur.', ['s:estrellas','estrellas:blancas','estrellas:5']),
                 H('F', 'Monumentos', 'Sus casas tradicionales, los fale, no tienen paredes.'),
                 H('F', 'Comida', "Su plato típico es el lu'au: hojas de taro con crema de coco."),
-                H('F', 'Naturaleza', 'Su ave más rara es la paloma manumea, de pico dentado.')
+                H('F', 'Naturaleza', 'Su ave más rara es la paloma manumea, de pico dentado.'),
+                H('F', 'Historia', 'Su danza tradicional se llama siva.'),
+                H('F', 'Historia', 'Celebra el festival Teuila.'),
+                H('F', 'Naturaleza', 'Tiene una isla volcánica famosa por sus playas llamada Savai\'i.')
             ]},
             { id: "VUT", iso: "vu", nombre: "Vanuatu",
+              datos: { capital: 'Port Vila', moneda: 'el vatu', idioma: 'inglés, francés y bislama' },
               perfil: ['franjas:2','orient:h','c:rojo','c:verde','c:negro','c:amarillo','ncolores:4','pos:arriba=rojo','pos:abajo=verde','s:y','y:negra','s:triangulo','triangulo:negro','s:colmillo','s:helecho'],
               pistas: [
                 H('D', 'Bandera', 'Tiene dos franjas horizontales y una Y negra acostada con bordes amarillos.', ['franjas:2','s:y','y:negra']),
@@ -1164,6 +1632,7 @@
                 H('F', 'Naturaleza', 'En sus islas viven zorros voladores, unos murciélagos grandes.')
             ]},
             { id: "TON", iso: "to", nombre: "Tonga",
+              datos: { capital: 'Nuku\'alofa', moneda: 'el pa\'anga', idioma: 'tongano e inglés' },
               perfil: ['nofranjas','fondo:rojo','c:rojo','c:blanco','ncolores:2','s:canton','canton:blanco','s:cruz','cruz:roja'],
               pistas: [
                 H('D', 'Bandera', 'Fondo rojo con un rectángulo blanco en la esquina.', ['fondo:rojo','s:canton','canton:blanco']),
@@ -1172,9 +1641,13 @@
                 H('M', 'Color extra', 'La cruz dentro del rectángulo blanco es roja.', ['canton:blanco','s:cruz','cruz:roja']),
                 H('F', 'Comida', "Su bebida típica es el 'otai, fruta rallada con leche de coco."),
                 H('F', 'Monumentos', "Tiene un portal de tres piedras gigantes llamado Ha'amonga 'a Maui."),
-                H('F', 'Naturaleza', 'En sus islas viven zorros voladores del Pacífico.')
+                H('F', 'Naturaleza', 'En sus islas viven zorros voladores del Pacífico.'),
+                H('F', 'Naturaleza', 'Su archipiélago más famoso son las islas Vava\'u.'),
+                H('F', 'Historia', 'Su danza tradicional se llama tau\'olunga.'),
+                H('F', 'Historia', 'Su festival principal es el Heilala.')
             ]},
             { id: "PLW", iso: "pw", nombre: "Palaos",
+              datos: { capital: 'Ngerulmud', moneda: 'el dólar estadounidense', idioma: 'palauano e inglés' },
               perfil: ['nofranjas','fondo:celeste','c:celeste','c:amarillo','ncolores:2','s:circulo','circulo:amarillo','circulo:descentrado'],
               pistas: [
                 H('D', 'Bandera', 'Fondo celeste con un solo círculo.', ['fondo:celeste','s:circulo']),
@@ -1183,9 +1656,12 @@
                 H('M', 'Color extra', 'El círculo es amarillo y representa la luna llena.', ['s:circulo','circulo:amarillo']),
                 H('F', 'Naturaleza', 'En sus costas vive el dugongo, un mamífero marino tranquilo.'),
                 H('F', 'Monumentos', 'Sus casas de reunión, los Bai, están talladas y pintadas.'),
-                H('F', 'Comida', 'Comen sopa de pescado con leche de coco y cangrejo de manglar.')
+                H('F', 'Comida', 'Comen sopa de pescado con leche de coco y cangrejo de manglar.'),
+                H('F', 'Naturaleza', 'Tiene un sitio de buceo famoso llamado Blue Corner.'),
+                H('F', 'Naturaleza', 'Tiene un lago lleno de medusas que no pican.')
             ]},
             { id: "SLB", iso: "sb", nombre: "Islas Salomón",
+              datos: { capital: 'Honiara', moneda: 'el dólar de las Islas Salomón', idioma: 'inglés' },
               perfil: ['orient:diag','s:diag','diag:amarilla','s:triangulo','triangulo:azul','triangulo:verde','c:azul','c:verde','c:amarillo','c:blanco','ncolores:4','s:estrellas','estrellas:blancas','estrellas:5'],
               pistas: [
                 H('D', 'Bandera', 'Está dividida en diagonal por una línea delgada dorada.', ['orient:diag','s:diag','diag:amarilla']),
@@ -1194,12 +1670,14 @@
                 H('M', 'Color extra', 'En el triángulo azul hay cinco estrellas blancas.', ['triangulo:azul','s:estrellas','estrellas:blancas','estrellas:5']),
                 H('F', 'Naturaleza', 'En sus islas viven una cacatúa de plumas blancas y el varano de manglar.'),
                 H('F', 'Comida', 'Comen poi: plátano machacado con crema de coco.'),
-                H('F', 'Monumentos', 'Tiene aldeas sobre pilotes en la Laguna Marovo.')
+                H('F', 'Monumentos', 'Tiene aldeas sobre pilotes en la Laguna Marovo.'),
+                H('F', 'Historia', 'Ha celebrado el Festival de las Artes del Pacífico.')
             ]},
             // Kiribati: agregado para completar 10 países en Oceanía (no está en los
             // documentos fuente). Bandera y datos verificados contra fuentes oficiales:
             // Encyclopædia Britannica (bandera y geografía) y Patronato/organismos oficiales.
             { id: "KIR", iso: "ki", nombre: "Kiribati",
+              datos: { capital: 'Tarawa del Sur', moneda: 'el dólar australiano', idioma: 'inglés' },
               perfil: ['c:rojo','c:amarillo','c:azul','c:blanco','ncolores:4','pos:arriba=rojo','s:ave','ave:dorada','s:sol','sol:dorado','s:olas'],
               pistas: [
                 H('D', 'Bandera', 'Su mitad de arriba es roja y la de abajo tiene olas.', ['pos:arriba=rojo','s:olas']),
@@ -1209,8 +1687,56 @@
                 H('F', 'Naturaleza', 'Es un país de islas de coral muy bajitas en medio del océano Pacífico.'),
                 H('F', 'Naturaleza', 'Su ave símbolo es la fragata, con alas muy largas.'),
                 H('F', 'Naturaleza', 'Está formado por 33 atolones, islas de coral en forma de anillo.'),
-                H('F', 'Historia', 'Es uno de los primeros lugares del mundo donde empieza cada nuevo día.')
-            ]}
+                H('F', 'Historia', 'Es uno de los primeros lugares del mundo donde empieza cada nuevo día.'),
+                H('F', 'Historia', 'Su danza tradicional se llama Te Kaimatoa.'),
+                H('F', 'Comida', 'Su plato tradicional es el palu sami, con pescado y coco.')
+            ]},
+            { id: "FSM", iso: "fm", nombre: "Micronesia",
+              datos: { capital: 'Palikir', moneda: 'el dólar estadounidense', idioma: 'inglés' },
+              perfil: ['nofranjas','fondo:celeste','c:celeste','c:blanco','ncolores:2','s:estrellas','estrellas:blancas','estrellas:4','estrellas:rombo'],
+              pistas: [
+                H('D', 'Bandera', 'Fondo celeste con cuatro estrellas blancas y nada más.', ['fondo:celeste','s:estrellas','estrellas:4','estrellas:blancas']),
+                H('D', 'Bandera', 'Sus cuatro estrellas forman un rombo en el centro.', ['estrellas:4','estrellas:rombo']),
+                H('M', 'Color extra', 'Fondo celeste claro con cuatro estrellas blancas en forma de rombo.', ['fondo:celeste','estrellas:blancas','estrellas:rombo']),
+                H('M', 'Color extra', 'Solo usa dos colores: celeste y blanco.', ['c:celeste','c:blanco','ncolores:2']),
+                H('F', 'Naturaleza', 'Sus islas están en el océano Pacífico.'),
+                H('F', 'Naturaleza', 'Su isla más grande se llama Pohnpei.'),
+                H('F', 'Historia', 'La pesca es una de sus actividades más importantes.')
+              ]},
+            { id: "MHL", iso: "mh", nombre: "Islas Marshall",
+              datos: { capital: 'Majuro', moneda: 'el dólar estadounidense', idioma: 'marshalés e inglés' },
+              perfil: ['fondo:azul','c:azul','c:naranja','c:blanco','ncolores:3','orient:diag','s:diag','diag:naranja','diag:blanca','s:estrella','estrella:blanca','estrella:esquina','estrella:rayos'],
+              pistas: [
+                H('D', 'Bandera', 'Fondo azul con dos bandas en diagonal que se hacen más anchas hacia la derecha.', ['fondo:azul','s:diag','diag:naranja','diag:blanca']),
+                H('D', 'Bandera', 'Tiene una estrella blanca con muchas puntas en la esquina de arriba.', ['s:estrella','estrella:blanca','estrella:rayos','estrella:esquina']),
+                H('M', 'Color extra', 'Fondo azul, una banda naranja y otra blanca en diagonal, y una estrella blanca de muchas puntas en la esquina superior izquierda.', ['fondo:azul','diag:naranja','diag:blanca','estrella:blanca']),
+                H('M', 'Color extra', 'Sus dos bandas diagonales son una naranja y otra blanca.', ['diag:naranja','diag:blanca']),
+                H('F', 'Naturaleza', 'Está formado por atolones e islas de coral.'),
+                H('F', 'Naturaleza', 'Su ciudad principal se llama Majuro.')
+              ]},
+            { id: "NRU", iso: "nr", nombre: "Nauru",
+              datos: { capital: 'Yaren', moneda: 'el dólar australiano', idioma: 'nauruano e inglés' },
+              perfil: ['fondo:azul','c:azul','c:amarillo','c:blanco','ncolores:3','s:linea','linea:amarilla','s:estrella','estrella:blanca','estrella:abajo','estrella:rayos'],
+              pistas: [
+                H('D', 'Bandera', 'Fondo azul oscuro con una línea amarilla delgada que la cruza por el medio.', ['fondo:azul','s:linea','linea:amarilla']),
+                H('D', 'Bandera', 'Tiene una sola estrella blanca debajo de una línea amarilla.', ['s:estrella','estrella:blanca','estrella:abajo','linea:amarilla']),
+                H('M', 'Color extra', 'Fondo azul oscuro, una línea amarilla horizontal y una estrella blanca de doce puntas abajo, junto al mástil.', ['fondo:azul','linea:amarilla','estrella:blanca','estrella:abajo']),
+                H('M', 'Color extra', 'Su estrella blanca tiene doce puntas y está abajo, junto al mástil.', ['estrella:blanca','estrella:rayos','estrella:abajo']),
+                H('F', 'Historia', 'Su actividad principal es la minería de fosfato.'),
+                H('F', 'Naturaleza', 'Es una isla del Pacífico central donde viven unas 10,000 personas.')
+              ]},
+            { id: "TUV", iso: "tv", nombre: "Tuvalu",
+              datos: { capital: 'Funafuti', moneda: 'el dólar australiano', idioma: 'tuvaluano e inglés' },
+              perfil: ['nofranjas','fondo:celeste','c:celeste','c:rojo','c:blanco','c:azul','c:amarillo','ncolores:5','s:unionjack','s:canton','s:estrellas','estrellas:amarillas','estrellas:9'],
+              pistas: [
+                H('D', 'Bandera', 'Fondo celeste con una bandera pequeña en la esquina y estrellas amarillas.', ['fondo:celeste','s:unionjack','s:estrellas','estrellas:amarillas']),
+                H('D', 'Bandera', 'Tiene nueve estrellas amarillas sobre fondo celeste.', ['estrellas:9','estrellas:amarillas','fondo:celeste']),
+                H('M', 'Color extra', 'Fondo celeste con la bandera del Reino Unido en la esquina y nueve estrellas amarillas.', ['fondo:celeste','s:unionjack','estrellas:9','estrellas:amarillas']),
+                H('M', 'Color extra', 'Sus estrellas son amarillas, no blancas ni rojas.', ['estrellas:amarillas','s:estrellas']),
+                H('F', 'Monumentos', 'Su lugar de reunión tradicional se llama maneapa.'),
+                H('F', 'Naturaleza', 'Su punto más alto está a solo 5 metros sobre el nivel del mar.'),
+                H('F', 'Historia', 'La pesca es su actividad principal.')
+              ]}
         ]
     };
 
@@ -1263,14 +1789,43 @@
        - Verifica que los hechos de cada pista existan en el perfil del país
        Devuelve un reporte auditable (app.auditarPistas()).
        ===================================================================== */
+    // Pistas fáciles generadas desde la ficha (Capital, Moneda, Idioma).
+    // Moneda e Idioma declaran un hecho para que el motor pueda distinguir
+    // países que comparten moneda (euro) o idioma (español, inglés).
+    const slugDato = (s) => normalizar(s).replace(/^(el|la|los|las) /, '').replace(/[^a-z0-9]+/g, '-');
+    function pistasDeDatos(p) {
+        const dt = p.datos;
+        if (!dt) return { pistas: [], hechos: [] };
+        const pistas = [], hechos = [];
+        if (dt.capital) {
+            const t = dt.capital.includes(',') ? `Sus capitales son ${dt.capital}.` : `Su capital es ${dt.capital}.`;
+            pistas.push(H('F', 'Capital', t));
+        }
+        if (dt.moneda) {
+            const f = 'moneda:' + slugDato(dt.moneda); hechos.push(f);
+            pistas.push(H('F', 'Moneda', `Para comprar ahí se usa ${dt.moneda}.`, [f]));
+        }
+        if (dt.idioma) {
+            const f = 'idioma:' + slugDato(dt.idioma); hechos.push(f);
+            const plural = /,| y | e /.test(dt.idioma);
+            pistas.push(H('F', 'Idioma', `En este país se ${plural ? 'hablan' : 'habla'} ${dt.idioma}.`, [f]));
+        }
+        return { pistas, hechos };
+    }
+    const fichaMoneda = (m) => { const s = m.replace(/^(el|la|los|las) /, ''); return s.charAt(0).toUpperCase() + s.slice(1); };
+    const fichaIdioma = (i) => i.charAt(0).toUpperCase() + i.slice(1);
+
     function sanitizeDatabase(db) {
         const reporte = { eliminadas: [], sinNivel: [], inconsistentes: [], pendientes: [] };
         const limpio = {};
         for (const [cont, paises] of Object.entries(db)) {
             limpio[cont] = paises.map(p => {
                 const nombreNorm = normalizar(p.nombre);
-                const perfil = new Set(p.perfil || []);
-                const pistas = p.pistas.filter(h => {
+                const gen = pistasDeDatos(p);
+                const perfil = new Set([...(p.perfil || []), ...gen.hechos]);
+                // Las pistas de ficha que mencionan el país (p. ej. capital Túnez) se omiten en silencio
+                const deFicha = gen.pistas.filter(h => !normalizar(h.t).includes(nombreNorm));
+                const pistas = [...p.pistas, ...deFicha].filter(h => {
                     const motivo = motivoBloqueo(h.t);
                     if (motivo) { reporte.eliminadas.push({ pais: p.nombre, motivo, texto: h.t }); return false; }
                     if (normalizar(h.t).includes(nombreNorm)) { reporte.eliminadas.push({ pais: p.nombre, motivo: 'nombre del país', texto: h.t }); return false; }
@@ -1283,7 +1838,7 @@
                 for (const nivel of ['D', 'M', 'F']) {
                     if (!pistas.some(h => h.n === nivel)) reporte.sinNivel.push({ pais: p.nombre, nivel });
                 }
-                return { ...p, pistas };
+                return { ...p, perfil: [...perfil], pistas };
             });
         }
         return { db: limpio, reporte };
@@ -1541,6 +2096,7 @@
             this.db = db; this.auditoria = reporte;
             console.info(`[Exploradores] Filtro: ${reporte.eliminadas.length} descartada(s) · ${reporte.inconsistentes.length} inconsistencia(s) · ${reporte.pendientes.length} pendiente(s) de verificación.`, reporte);
             Sound.init(); Confetti.init();
+            $('home-paises').textContent = Object.values(db).reduce((n, arr) => n + arr.length, 0);
             this.updateSoundButtons();
             this.renderHomeStats();
             this.bindKeyboard();
@@ -1951,6 +2507,7 @@
             } else {
                 flag.classList.add('hidden'); flag.removeAttribute('src');
             }
+            this.renderFicha(country);
 
             const cancelBtn = $('modal-cancel');
             cancelBtn.classList.toggle('hidden', !cancelable);
@@ -1963,6 +2520,18 @@
             content.classList.replace('scale-90', 'scale-100');
             btn.focus();
             btn.onclick = () => this.hideModal(callback);
+        },
+
+        // Ficha del país al revelar la bandera (acierto o fallo)
+        renderFicha(country) {
+            const ficha = $('modal-ficha');
+            const dt = country && country.datos;
+            ficha.classList.toggle('hidden', !dt);
+            if (!dt) return;
+            $('ficha-capital').textContent = dt.capital;
+            $('ficha-moneda').textContent = fichaMoneda(dt.moneda);
+            $('ficha-idioma').textContent = fichaIdioma(dt.idioma);
+            $('ficha-codigo').textContent = `${country.iso.toUpperCase()} · ${country.id}`;
         },
 
         hideModal(callback) {

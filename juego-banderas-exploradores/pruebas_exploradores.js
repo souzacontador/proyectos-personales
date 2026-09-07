@@ -20,7 +20,7 @@ const localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k
 const window = { addEventListener() {} };
 const document = { addEventListener() {}, getElementById() { return null; } };
 const M = new Function('window', 'document', 'localStorage',
-    code + '\nreturn { REGLAS, COSTO_COMODIN, CONTINENTES, DATABASE, sanitizeDatabase, motivoBloqueo, normalizar, HintEngine, Adaptativo, Historial, shuffle, pick, fmtPts };'
+    code + '\nreturn { REGLAS, COSTO_COMODIN, CONTINENTES, DATABASE, sanitizeDatabase, motivoBloqueo, normalizar, HintEngine, Adaptativo, Historial, shuffle, pick, fmtPts, pistasDeDatos, fichaMoneda, fichaIdioma };'
 )(window, document, localStorage);
 
 let pasadas = 0, fallidas = 0;
@@ -31,7 +31,7 @@ function test(nombre, fn) {
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 const eq = (a, b, msg) => assert(a === b, `${msg}: esperado ${JSON.stringify(b)}, obtenido ${JSON.stringify(a)}`);
 
-const { REGLAS, COSTO_COMODIN, CONTINENTES, DATABASE, sanitizeDatabase, motivoBloqueo, HintEngine, Adaptativo, Historial, shuffle, pick } = M;
+const { REGLAS, COSTO_COMODIN, CONTINENTES, DATABASE, sanitizeDatabase, motivoBloqueo, normalizar, HintEngine, Adaptativo, Historial, shuffle, pick, pistasDeDatos, fichaMoneda, fichaIdioma } = M;
 const { db, reporte } = sanitizeDatabase(DATABASE);
 const todos = Object.values(db).flat();
 
@@ -46,8 +46,8 @@ test('Cada comodín resta 25% del base: 10 → 7.5 → 5', () => {
     eq(pts(0), 10, '0 comodines'); eq(pts(1), 7.5, '1 comodín'); eq(pts(2), 5, '2 comodines');
 });
 test('Puntaje máximo de ronda = 100', () => eq(REGLAS.PREGUNTAS_POR_RONDA * REGLAS.PUNTOS_BASE, 100, 'máximo'));
-test('Categorías de comodín limitadas a la regla 3', () => {
-    eq(REGLAS.CATEGORIAS_COMODIN.join('|'), 'Color extra|Monumentos|Comida|Historia|Naturaleza', 'categorías');
+test('Categorías de comodín limitadas a la regla 3 (más Capital, Moneda e Idioma)', () => {
+    eq(REGLAS.CATEGORIAS_COMODIN.join('|'), 'Color extra|Monumentos|Comida|Historia|Naturaleza|Capital|Moneda|Idioma', 'categorías');
 });
 
 console.log('\n2. Banco de datos');
@@ -55,9 +55,47 @@ test('5 continentes con al menos 10 países cada uno', () => {
     eq(CONTINENTES.length, 5, 'continentes');
     for (const c of CONTINENTES) assert(db[c.key].length >= 10, `${c.nombre} tiene ${db[c.key].length}`);
 });
+test('Catálogo ampliado: África 20, América 20, Asia 20, Europa 20, Oceanía 14 = 94 países', () => {
+    const esperado = { Africa: 20, America: 20, Asia: 20, Europa: 20, Oceania: 14 };
+    for (const [k, n] of Object.entries(esperado)) eq(db[k].length, n, k);
+    eq(todos.length, 94, 'total');
+});
 test('IDs únicos y códigos ISO de dos letras', () => {
     const ids = new Set(todos.map(p => p.id)); eq(ids.size, todos.length, 'ids únicos');
     for (const p of todos) assert(/^[a-z]{2}$/.test(p.iso), `ISO inválido en ${p.nombre}`);
+});
+test('Todos los países tienen ficha: capital, moneda con artículo e idioma en minúsculas', () => {
+    for (const p of todos) {
+        const dt = p.datos;
+        assert(dt && dt.capital && dt.moneda && dt.idioma, `${p.nombre} sin ficha completa`);
+        assert(/^(el|la|los|las) /.test(dt.moneda), `${p.nombre}: moneda sin artículo (${dt.moneda})`);
+        assert(dt.idioma === dt.idioma.toLowerCase(), `${p.nombre}: idioma con mayúsculas (${dt.idioma})`);
+        assert(fichaMoneda(dt.moneda)[0] === fichaMoneda(dt.moneda)[0].toUpperCase(), 'ficha moneda capitalizada');
+        assert(fichaIdioma(dt.idioma)[0] === fichaIdioma(dt.idioma)[0].toUpperCase(), 'ficha idioma capitalizada');
+    }
+});
+test('Pistas de ficha: cada país conserva ≥1 de Capital/Moneda/Idioma y ninguna menciona al país', () => {
+    // Se omiten las que dirían el nombre del país (p. ej. capital Túnez, rupia nepalí); el resto se conserva
+    const pocas = [];
+    for (const p of todos) {
+        const gen = p.pistas.filter(h => ['Capital', 'Moneda', 'Idioma'].includes(h.c));
+        assert(gen.length >= 1, `${p.nombre}: sin pistas de ficha`);
+        if (gen.length < 2) pocas.push(p.nombre);
+        for (const h of gen) assert(!normalizar(h.t).includes(normalizar(p.nombre)), `${p.nombre}: ${h.t}`);
+        for (const h of gen.filter(x => x.c !== 'Capital')) assert(h.f.length === 1 && p.perfil.includes(h.f[0]), `${p.nombre}: hecho de ficha ausente del perfil`);
+    }
+    console.log(`      con una sola pista de ficha (las demás mencionarían al país): ${pocas.join(', ') || 'ninguno'}`);
+    const g = pistasDeDatos({ nombre: 'X', datos: { capital: 'A, B y C', moneda: 'el euro', idioma: 'inglés y francés' } });
+    eq(g.pistas[0].t, 'Sus capitales son A, B y C.', 'capitales plural');
+    eq(g.pistas[1].t, 'Para comprar ahí se usa el euro.', 'moneda');
+    eq(g.pistas[2].t, 'En este país se hablan inglés y francés.', 'idiomas plural');
+    eq(g.hechos.join('|'), 'moneda:euro|idioma:ingles-y-frances', 'hechos');
+});
+test('Países que comparten moneda o idioma comparten el hecho (el motor puede distinguirlos)', () => {
+    const euro = db.Europa.filter(p => p.perfil.includes('moneda:euro')).length;
+    assert(euro >= 10, `países con euro: ${euro}`);
+    const esp = db.America.filter(p => p.perfil.includes('idioma:espanol')).length;
+    assert(esp >= 10, `países con español: ${esp}`);
 });
 test('Cada país tiene ≥2 pistas difíciles, ≥2 medias y ≥2 fáciles tras el filtro', () => {
     for (const p of todos) for (const n of ['D', 'M', 'F']) {
@@ -78,7 +116,7 @@ test('Reporte de pistas pendientes de verificación (informativo)', () => {
 console.log('\n3. Filtro de contenido');
 test('Bloquea conflictos bélicos', () => { eq(motivoBloqueo('Lleva un fusil AK-47'), 'conflictos', 'AK-47'); eq(motivoBloqueo('Homenaje al ejército'), 'conflictos', 'ejército con acento'); });
 test('Bloquea religión', () => { eq(motivoBloqueo('La mezquita más grande'), 'religion', 'mezquita'); eq(motivoBloqueo('representa a la diosa del sol'), 'religion', 'diosa'); });
-test('Bloquea política', () => { eq(motivoBloqueo('símbolo del partido'), 'politica', 'partido'); eq(motivoBloqueo('tras la revolución'), 'politica', 'revolución'); });
+test('Bloquea política', () => { eq(motivoBloqueo('símbolo del partido'), 'politica', 'partido'); eq(motivoBloqueo('tras la revolución'), 'politica', 'revolución'); eq(motivoBloqueo('celebra su día de la independencia'), 'politica', 'independencia'); eq(motivoBloqueo('el actual presidente'), 'politica', 'presidente'); });
 test('No bloquea texto neutro', () => { eq(motivoBloqueo('Una estrella verde en el centro; se come café con pan'), null, 'neutro'); eq(motivoBloqueo('Tiene forma de armadillo'), null, 'armadillo ≠ arma'); });
 
 console.log('\n4. Motor de pistas discriminantes');
